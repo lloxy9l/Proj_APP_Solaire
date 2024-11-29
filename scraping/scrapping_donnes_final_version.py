@@ -66,7 +66,7 @@ def scrapping(lat,long):
 
     def scrapping_irradiance(lat, long):
         # Path to geckodriver (ensure geckodriver is installed and accessible)
-        geckodriver_path = r"scripts final\geckodriver.exe"
+        geckodriver_path = r"scraping\geckodriver.exe"
         firefox_service = FirefoxService(geckodriver_path)
         
         # Setting Firefox options (headless for running without opening browser window)
