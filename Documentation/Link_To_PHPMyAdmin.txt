@@ -1,5 +1,0 @@
-Lien vers la base de données :
-https://projet-idu.hqbr.win/
-
-login: ### demander au PO ###
-mdp: ### demander au PO ###
