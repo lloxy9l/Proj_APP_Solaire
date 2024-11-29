@@ -1,0 +1,172 @@
+@media only screen and (max-width: 850px) {
+
+    :root{
+        text-align: center;
+    }
+
+
+    header{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        justify-content: space-between;
+        padding: 30px;
+        background: rgb(6,0,114);
+        background: linear-gradient(126deg, rgba(6,0,114,1) 0%, rgba(29,29,147,1) 47%, rgba(0,77,255,1) 100%);
+        font-weight: bold;
+        color: #ffffff;
+        border-radius: 0;
+        margin: 0 auto;
+        font-size: large;
+    }
+
+    header .logo img{
+        width: 200px;
+    }
+
+    .bg_grid{
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        margin: 20px 0px;
+        z-index: -1;
+        border: 10px;
+        justify-content: center;
+    }
+
+    .background_div {
+        background-image: none;
+    }
+
+    
+
+    /* Menu déroulant */
+    .menu_bar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .links_home_page {
+        display: none;
+        position:relative;
+        flex-direction: column;
+        align-items: center;
+        background: linear-gradient(126deg, rgba(6,0,114,1) 0%, rgba(29,29,147,1) 47%, rgba(0,77,255,1) 100%);
+        width: 100%;
+        border: solid 2px #ffffff;
+        transition: all 250ms ease-in-out;
+    }
+
+    .links_home_page a {
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        border-radius: .5em;
+        transition: all 250ms ease-in-out;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        margin: 0px;
+    }
+
+    .links_home_page a:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Afficher le menu déroulant lorsque le bouton est en focus */
+    .menu_btn:focus + .links_home_page {
+        display: flex;
+    }
+
+    /* Style pour le bouton du menu déroulant */
+    .menu_btn {
+        display: block;
+        background-color: transparent;
+        font-weight: bold;
+        color: white;
+        text-transform: uppercase;
+        padding: 12px;
+        border: solid 1.5px #ffffff;
+        border-radius: .5em;
+        transition: all 250ms ease-in-out;
+        font-size: large;
+    }
+
+    .menu_btn:hover {
+        background-color: rgb(255, 255, 255, 0.3);
+    }
+
+    .home_presentation {
+        width: 90%;
+    }
+
+    .container_txt_project {
+        width: 90%;
+        justify-content: center;
+    }
+
+    .description .card {
+        padding: 10px;
+        margin: 0px;
+    }
+
+    .dashboard_img1 {
+        width: 90%;
+        height: 100%;
+        display: block;
+        margin: auto;
+        justify-tracks: center;
+    }
+
+    #UX_title {
+        padding-top: 100px;
+    }
+
+    .flex_infos {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .container_prices {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .card_price_silver {
+        width: 70%;
+    }
+
+    .card_price_gold {
+        width: 70%;
+    }
+
+    .card_price_paltinum {
+        width: 70%;
+    }
+
+    #TEAM_title {
+        padding-top: 100px;
+    }
+
+    container_team img {
+        width: 100%;
+    }
+
+    .block_footer{
+        display: flex;
+        flex-direction: column;
+        padding: 0px;
+        text-align: center;
+    }
+
+    .about_footer{
+        width: 100%;
+    }
+
+}
