@@ -2,3 +2,4 @@ config_bdd.php
 config_bdd.py
 
 __pycache__
+.DS_Store
