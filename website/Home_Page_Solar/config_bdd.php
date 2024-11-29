@@ -1,6 +1,6 @@
 <?php
     $servername = 'beelink.hqbr.win:3306';
     $username = 'dev';
-    $password = '8a*#Hk$2Fq@p&9z!';
+    $password = '5n*d@oIIZz#d9';
     $database = 'projet_solarx';
 ?>

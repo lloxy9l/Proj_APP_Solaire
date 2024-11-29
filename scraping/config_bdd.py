@@ -1,4 +1,4 @@
 host = "beelink.hqbr.win"
 user = "dev"
-password = "8a*#Hk$2Fq@p&9z!"
+password = "5n*d@oIIZz#d9"
 database = "projet_solarx"
