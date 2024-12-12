@@ -76,7 +76,7 @@ vertical_header = html.Div(
                             src="assets/img/rain.png",  # Icône pour Paramètres
                             style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
-                        html.Span("Paramètres", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
+                        html.Span("Précipitations", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="#",
                 ),
@@ -275,7 +275,7 @@ def update_menu_text_display(sidebar_width):
             html.A(
                 children=[
                     html.Img(src="assets/img/rain.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Paramètres", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                    html.Span("Précipitations", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
                 ],
                 href="#",
             ),
@@ -307,7 +307,7 @@ def update_menu_text_display(sidebar_width):
             html.A(
                 children=[
                     html.Img(src="assets/img/rain.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Paramètres", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
+                    html.Span("Précipitations", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
                 ],
                 href="#",
             ),
