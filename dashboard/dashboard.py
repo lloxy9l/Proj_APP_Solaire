@@ -5,6 +5,7 @@ import dash_bootstrap_components as dbc
 # Initialisation de l'application Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+
 # Style général pour la barre latérale
 vertical_header_style = {
     "height": "100vh",  # Prend toute la hauteur de l'écran
@@ -88,26 +89,7 @@ vertical_header = html.Div(
                 ),
             ]
         ),
-        # Pied de page
-        html.Div(
-            style={
-                "display": "flex",  # Utilise Flexbox
-                "align-items": "center",  # Centre verticalement
-            },
-            children=[
-                html.A(  # Lien autour de l'image
-                    href="#",  # URL cible
-                    target="_blank",  # Ouvre le lien dans un nouvel onglet
-                    children=[
-                        html.Img(
-                            src="assets/img/log-out.png",
-                            style={"width": "40px", "border-radius": "8px", "margin-left": "10px", "margin-bottom": "10px"},
-                        ),
-                        html.Span("Se déconnecter", style={"margin-left": "10px", "font-size": "14px", "display": "none"}),  # Ajout du span pour le texte
-                    ],
-                ),
-            ],
-        ),
+        
         # Bouton pour changer la taille
         html.Button(
             children=[
