@@ -116,12 +116,11 @@ vertical_header = html.Div(
 )
 
 # Contenu principal
-# Contenu principal
 main_content = html.Div(
     style={
         "margin-left": "80px",  # Décale le contenu principal à droite du header
         "padding": "20px",
-        "width":"85%"
+        "width": "85%",
     },
     children=[   
         # Ajout d'une barre de recherche et d'une photo de profil
@@ -132,20 +131,52 @@ main_content = html.Div(
                 "align-items": "center",  # Alignement vertical
                 "margin-top": "20px",
                 "padding-bottom": "10px",
-                "width":"100%"
+                "width": "100%",
             },
             children=[
-                # Barre de recherche
-                dcc.Input(
-                    id="search-input",
-                    type="text",
-                    placeholder="Rechercher...",
+                # Barre de recherche moderne
+                html.Div(
                     style={
+                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
                         "width": "50%",
-                        "padding": "10px",
-                        "border-radius": "5px",
-                        "border": "1px solid #ccc",
-                    }
+                    },
+                    children=[
+                        # Icône de recherche à gauche de la barre
+                        html.Div(
+                            style={
+                                "position": "absolute",
+                                "left": "10px",
+                                "top": "50%",
+                                "transform": "translateY(-50%)",
+                            },
+                            children=[
+                                html.Img(
+                                    src="assets/img/search-icon.png",  # Remplacez par le chemin de votre icône de recherche
+                                    style={
+                                        "width": "30px",
+                                        "height": "30px",
+                                        "margin-left":"10px",
+                                    },
+                                ),
+                            ],
+                        ),
+                        # Input de recherche avec un design moderne
+                        dcc.Input(
+                            id="search-input",
+                            type="text",
+                            placeholder="Rechercher...",
+                            style={
+                                "width": "100%",
+                                "height":"60px",
+                                "padding": "10px 10px 10px 65px",  # Espace pour l'icône
+                                "border-radius": "2em",  # Forme arrondie
+                                "border": "2px solid #005DFF",  # Bordure claire
+                                "background-color": "#f8f8f8",  # Fond léger
+                                "font-size": "18px",  # Taille de la police
+                                "outline": "none",  # Supprime le contour au focus
+                            },
+                        ),
+                    ],
                 ),
                 
                 # Photo de profil
@@ -154,8 +185,8 @@ main_content = html.Div(
                         html.Img(
                             src="assets/img/profile.png",  # Remplacez par le chemin de votre image de profil
                             style={
-                                "width": "40px",
-                                "height": "40px",
+                                "width": "65px",
+                                "height": "65px",
                                 "border-radius": "50%",  # Image ronde
                                 "border": "2px solid #fff",  # Bordure blanche autour de l'image
                             },
