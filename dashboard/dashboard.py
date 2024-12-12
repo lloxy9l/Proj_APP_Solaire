@@ -5,6 +5,7 @@ import dash_bootstrap_components as dbc
 # Initialisation de l'application Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+
 # Style général pour la barre latérale
 vertical_header_style = {
     "height": "100vh",  # Prend toute la hauteur de l'écran

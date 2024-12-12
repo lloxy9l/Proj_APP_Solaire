@@ -1,3 +1,7 @@
+*{
+    user-select: none;
+}
+
 #vertical-header {
     transition: width 0.3s ease; /* Transition pour un effet fluide */
     width: 80px; /* Largeur par défaut */
