@@ -30,19 +30,21 @@ vertical_header = html.Div(
             children=[
                 html.Img(
                     src="assets/img/logo.png",
-                    style={"width": "100%", "border-radius": "8px", "margin-top": "10px"},
+                    style={"width": "60px", "border-radius": "8px", "margin-top": "10px"},
                 ),
             ]
         ),
         # Menu de navigation
         html.Div(
+            id="nav-menu",  # Ajout d'un ID pour manipuler les enfants dans le callback
             children=[
                 html.A(
                     children=[
                         html.Img(
                             src="assets/img/home.png",  # Icône pour Accueil
-                            style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
+                        html.Span("Accueil", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="#",
                 ),
@@ -50,17 +52,19 @@ vertical_header = html.Div(
                     children=[
                         html.Img(
                             src="assets/img/sun.png",  # Icône pour Rapports
-                            style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
+                        html.Span("Rapports", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="#",
                 ),
                 html.A(
                     children=[
                         html.Img(
-                            src="assets/img/thermometer.png",  # Icône pour Rapports
-                            style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
+                            src="assets/img/thermometer.png",  # Icône pour Température
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
+                        html.Span("Température", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="#",
                 ),
@@ -68,8 +72,9 @@ vertical_header = html.Div(
                     children=[
                         html.Img(
                             src="assets/img/rain.png",  # Icône pour Paramètres
-                            style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
+                        html.Span("Paramètres", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="#",
                 ),
@@ -88,29 +93,84 @@ vertical_header = html.Div(
                     target="_blank",  # Ouvre le lien dans un nouvel onglet
                     children=[
                         html.Img(
-                            src="assets/log-out.png",
-                            style={"width": "60%", "border-radius": "8px", "margin-left": "10px", "margin-bottom": "10px"},
+                            src="assets/img/log-out.png",
+                            style={"width": "40px", "border-radius": "8px", "margin-left": "0px", "margin-bottom": "10px"},
                         ),
+                        html.Span("Se déconnecter", style={"margin-left": "10px", "font-size": "14px", "display": "none"}),  # Ajout du span pour le texte
                     ],
                 ),
             ],
         ),
         # Bouton pour changer la taille
-        html.Button("Toggle Width", id="toggle-width-btn", style={"margin-top": "20px", "background-color": "#ffffff", "color": "#005dff", "border": "none", "cursor": "pointer"}),
+        html.Button(
+            children=[
+                html.Img(
+                    src="assets/img/arrow.png",  # Icône de flèche
+                    style={"width": "40px", "transition": "transform 0.3s"}  # Ajout de la transition de rotation
+                ),
+            ],
+            id="toggle-width-btn",
+            style={"margin-top": "20px", "padding": "12px", "background-color": "#ffffff", "color": "#005dff", "border": "none", "cursor": "pointer", "border-radius": "2em"},
+        ),
     ],
 )
 
+# Contenu principal
 # Contenu principal
 main_content = html.Div(
     style={
         "margin-left": "80px",  # Décale le contenu principal à droite du header
         "padding": "20px",
+        "width":"85%"
     },
-    children=[
-        html.H1("Bienvenue dans le Dashboard"),
-        html.P("Voici un exemple de contenu principal."),
+    children=[   
+        # Ajout d'une barre de recherche et d'une photo de profil
+        html.Div(
+            style={
+                "display": "flex",
+                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
+                "align-items": "center",  # Alignement vertical
+                "margin-top": "20px",
+                "padding-bottom": "10px",
+                "width":"100%"
+            },
+            children=[
+                # Barre de recherche
+                dcc.Input(
+                    id="search-input",
+                    type="text",
+                    placeholder="Rechercher...",
+                    style={
+                        "width": "50%",
+                        "padding": "10px",
+                        "border-radius": "5px",
+                        "border": "1px solid #ccc",
+                    }
+                ),
+                
+                # Photo de profil
+                html.Div(
+                    children=[
+                        html.Img(
+                            src="assets/img/profile.png",  # Remplacez par le chemin de votre image de profil
+                            style={
+                                "width": "40px",
+                                "height": "40px",
+                                "border-radius": "50%",  # Image ronde
+                                "border": "2px solid #fff",  # Bordure blanche autour de l'image
+                            },
+                        ),
+                    ],
+                    style={
+                        "display": "flex",
+                        "align-items": "center",
+                    },
+                ),
+            ],
+        ),
     ],
 )
+
 
 # Disposition principale
 app.layout = html.Div(
@@ -124,15 +184,101 @@ app.layout = html.Div(
 
 # Callback pour changer la largeur de la barre latérale
 @app.callback(
-    Output("vertical-header", "style"),
+    [Output("vertical-header", "style"), Output("sidebar-width", "data"), Output("toggle-width-btn", "children")],
     Input("toggle-width-btn", "n_clicks"),
     State("sidebar-width", "data"),
     prevent_initial_call=True
 )
 def toggle_sidebar_width(n_clicks, current_width):
-    new_width = "400px" if current_width == "80px" else "80px"
-    vertical_header_style["width"] = new_width
-    return vertical_header_style
+    new_width = "200px" if current_width == "80px" else "80px"
+    updated_style = vertical_header_style.copy()
+    updated_style["width"] = new_width
+
+    # Gérer la rotation de la flèche
+    rotate_style = {"transform": "rotate(180deg)"} if new_width == "200px" else {}
+
+    # Mettre à jour les flèches et les spans
+    new_children = [
+        html.Img(
+            src="assets/img/arrow.png",  # Icône de flèche
+            style={**{"width": "40px"}, **rotate_style}  # Applique la rotation
+        )
+    ]
+    
+    return updated_style, new_width, new_children
+
+# Callback pour gérer l'affichage des spans
+@app.callback(
+    Output("nav-menu", "children"),
+    Input("sidebar-width", "data"),
+    prevent_initial_call=True,
+)
+def update_menu_text_display(sidebar_width):
+    # Si la largeur est réduite, on cache les spans
+    if sidebar_width == "80px":
+        # Retourne le menu avec les spans cachés
+        return [
+            html.A(
+                children=[
+                    html.Img(src="assets/img/home.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Accueil", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                ],
+                href="#",
+            ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/sun.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Rapports", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                ],
+                href="#",
+            ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/thermometer.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Température", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                ],
+                href="#",
+            ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/rain.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Paramètres", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                ],
+                href="#",
+            ),
+        ]
+    else:
+        # Si la largeur est agrandie, on montre les spans
+        return [
+            html.A(
+                children=[
+                    html.Img(src="assets/img/home.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Accueil", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
+                ],
+                href="#",
+            ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/sun.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Ensoleillement", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
+                ],
+                href="#",
+            ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/thermometer.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Température", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
+                ],
+                href="#",
+            ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/rain.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Paramètres", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
+                ],
+                href="#",
+            ),
+        ]
 
 # Exécution de l'application
 if __name__ == "__main__":

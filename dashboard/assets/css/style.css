@@ -6,3 +6,7 @@
 #vertical-header:hover {
     width: 500px; /* Largeur lors du survol */
 }
+
+a{
+    outline: none;
+}
