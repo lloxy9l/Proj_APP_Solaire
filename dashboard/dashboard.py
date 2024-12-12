@@ -18,6 +18,8 @@ vertical_header_style = {
     "border-radius": "0 2em 2em 0",
     "transition": "width 0.3s ease",  # Animation pour le changement de largeur
     "overflow": "hidden",  # Masque le contenu qui dépasse
+    "position":"fixed",
+    "z-index":"100"
 }
 
 # Contenu du header vertical
@@ -119,8 +121,8 @@ vertical_header = html.Div(
 main_content = html.Div(
     style={
         "margin-left": "80px",  # Décale le contenu principal à droite du header
-        "padding": "20px",
-        "width": "85%",
+        "padding": "20px 120px 20px 150px",
+        "width": "100%",
     },
     children=[   
         # Ajout d'une barre de recherche et d'une photo de profil
