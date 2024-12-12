@@ -29,7 +29,7 @@ vertical_header = html.Div(
         html.Div(
             children=[
                 html.Img(
-                    src="assets/logo.png",
+                    src="assets/img/logo.png",
                     style={"width": "100%", "border-radius": "8px", "margin-top": "10px"},
                 ),
             ]
@@ -40,7 +40,7 @@ vertical_header = html.Div(
                 html.A(
                     children=[
                         html.Img(
-                            src="assets/home.png",  # Icône pour Accueil
+                            src="assets/img/home.png",  # Icône pour Accueil
                             style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
                     ],
@@ -49,7 +49,7 @@ vertical_header = html.Div(
                 html.A(
                     children=[
                         html.Img(
-                            src="assets/sun.png",  # Icône pour Rapports
+                            src="assets/img/sun.png",  # Icône pour Rapports
                             style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
                     ],
@@ -58,7 +58,7 @@ vertical_header = html.Div(
                 html.A(
                     children=[
                         html.Img(
-                            src="assets/thermometer.png",  # Icône pour Rapports
+                            src="assets/img/thermometer.png",  # Icône pour Rapports
                             style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
                     ],
@@ -67,7 +67,7 @@ vertical_header = html.Div(
                 html.A(
                     children=[
                         html.Img(
-                            src="assets/rain.png",  # Icône pour Paramètres
+                            src="assets/img/rain.png",  # Icône pour Paramètres
                             style={"width": "60%", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
                     ],
