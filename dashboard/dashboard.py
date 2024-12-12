@@ -38,7 +38,13 @@ vertical_header = html.Div(
         ),
         # Menu de navigation
         html.Div(
-            id="nav-menu",  # Ajout d'un ID pour manipuler les enfants dans le callback
+            id="nav-menu", # Ajout d'un ID pour manipuler les enfants dans le callback
+            style={
+                "display": "flex",
+                "flex-direction": "column",  # Utilisation de flexbox pour aligner horizontalement
+                "align-items": "flex-left",  # Alignement vertical au centre
+                "white-space": "nowrap",  # Empêcher les retours à la ligne
+            },
             children=[
                 html.A(
                     children=[
@@ -86,7 +92,6 @@ vertical_header = html.Div(
         html.Div(
             style={
                 "display": "flex",  # Utilise Flexbox
-                "justify-content": "center",  # Centre horizontalement
                 "align-items": "center",  # Centre verticalement
             },
             children=[
@@ -96,7 +101,7 @@ vertical_header = html.Div(
                     children=[
                         html.Img(
                             src="assets/img/log-out.png",
-                            style={"width": "40px", "border-radius": "8px", "margin-left": "0px", "margin-bottom": "10px"},
+                            style={"width": "40px", "border-radius": "8px", "margin-left": "10px", "margin-bottom": "10px"},
                         ),
                         html.Span("Se déconnecter", style={"margin-left": "10px", "font-size": "14px", "display": "none"}),  # Ajout du span pour le texte
                     ],
@@ -124,7 +129,7 @@ main_content = html.Div(
         "padding": "20px 120px 20px 150px",
         "width": "100%",
     },
-    children=[   
+    children=[
         # Ajout d'une barre de recherche et d'une photo de profil
         html.Div(
             style={
@@ -180,7 +185,7 @@ main_content = html.Div(
                         ),
                     ],
                 ),
-                
+
                 # Photo de profil
                 html.Div(
                     children=[
@@ -237,7 +242,7 @@ def toggle_sidebar_width(n_clicks, current_width):
             style={**{"width": "40px"}, **rotate_style}  # Applique la rotation
         )
     ]
-    
+
     return updated_style, new_width, new_children
 
 # Callback pour gérer l'affichage des spans
