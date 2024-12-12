@@ -1,0 +1,8 @@
+#vertical-header {
+    transition: width 0.3s ease; /* Transition pour un effet fluide */
+    width: 80px; /* Largeur par défaut */
+}
+
+#vertical-header:hover {
+    width: 500px; /* Largeur lors du survol */
+}
