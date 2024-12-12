@@ -12,7 +12,7 @@ def fetch_data():
         user=user,
         password=password,
         database=database,
-        charset="utf8"
+        charset="utf8",
     )
     with conn.cursor(dictionary=True) as c:
         c.execute("""
