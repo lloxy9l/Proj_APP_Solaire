@@ -25,6 +25,10 @@ def fetch_data():
             ON p.idpoint = m.idpoint;
         """)
         data = c.fetchall()
+        c.execute("""
+            SELECT consommation FROM `2026_solarx_consommation` where annee=2023;
+        """)
+        data_conso=c.fetchall()
     conn.close()
     print('Data collected')
     # Convertir les données en DataFrame
@@ -34,14 +38,28 @@ def fetch_data():
     df["irradiance"] = pd.to_numeric(df["irradiance"], errors='coerce')
     df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
     df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
-    return df
+
+    df_conso = pd.DataFrame(data_conso)
+    df_conso["consommation"] = pd.to_numeric(df_conso["consommation"], errors='coerce')
+    return df,df_conso
 
 
 # Charger les données
 data = fetch_data()
-df = pd.DataFrame(data)
+data_meteo=data[0]
+df = pd.DataFrame(data_meteo)
+data_conso = data[1]
+df_conso = pd.DataFrame(data_conso)
 # Calculer la moyenne des valeurs pour chaque point GPS
 mean_data = df.groupby(["latitude", "longitude"]).mean().reset_index()
+global_means = {
+    "temperature": df["temperature"].mean(),
+    "ensoleillement": df["ensoleillement"].mean(),
+    "irradiance": df["irradiance"].mean(),
+    "precipitation": df["precipitation"].mean(),
+    "consommation":df_conso["consommation"].mean(),
+}
+
 print('Data Fetched')
 # Initialisation de l'application Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -238,7 +256,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Température", className="card-title"),
-                                html.P("25°C", className="card-text"),
+                                html.P(f"{global_means['temperature']:.2f}°C", className="card-text"),
                             ]
                         ),
                     ],
@@ -249,7 +267,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Précipitations", className="card-title"),
-                                html.P("12 mm", className="card-text"),
+                                html.P(f"{global_means['precipitation']:.2f} mm", className="card-text"),
                             ]
                         ),
                     ],
@@ -260,7 +278,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Ensoleillement", className="card-title"),
-                                html.P("8 h", className="card-text"),
+                                html.P(f"{global_means['ensoleillement']:.2f} s", className="card-text"),
                             ]
                         ),
                     ],
@@ -270,8 +288,8 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Humidité", className="card-title"),
-                                html.P("60%", className="card-text"),
+                                html.H4("Irradiance", className="card-title"),
+                                html.P(f"{global_means['irradiance']:.2f} W/m^2", className="card-text"),
                             ]
                         ),
                     ],
@@ -281,8 +299,8 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Puissance éléctrique moyenne", className="card-title"),
-                                html.P("25 kW", className="card-text"),
+                                html.H4("Consommation éléctrique moyenne", className="card-title"),
+                                html.P(f"{global_means['consommation']:.2f} MWh", className="card-text"),
                             ]
                         ),
                     ],
