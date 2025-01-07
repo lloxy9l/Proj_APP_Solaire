@@ -55,7 +55,7 @@ vertical_header = html.Div(
                         ),
                         html.Span("Accueil", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
-                    href="#",
+                    href="/home",
                 ),
                 html.A(
                     children=[
@@ -63,9 +63,9 @@ vertical_header = html.Div(
                             src="assets/img/sun.png",  # Icône pour Rapports
                             style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
-                        html.Span("Rapports", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
+                        html.Span("Ensoleillement", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
-                    href="#",
+                    href="/ensoleillement",
                 ),
                 html.A(
                     children=[
@@ -75,7 +75,7 @@ vertical_header = html.Div(
                         ),
                         html.Span("Température", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
-                    href="#",
+                    href="/temperature",
                 ),
                 html.A(
                     children=[
@@ -85,7 +85,7 @@ vertical_header = html.Div(
                         ),
                         html.Span("Précipitations", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
-                    href="#",
+                    href="/precipitations",
                 ),
                 html.A(
                     children=[
@@ -95,7 +95,7 @@ vertical_header = html.Div(
                         ),
                         html.Span("Electricité", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
-                    href="#",
+                    href="/electricite",
                 ),
             ]
         ),
@@ -121,6 +121,7 @@ main_content = html.Div(
         "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
         "width": "100%",
     },
+    
     children=[
         # Barre de recherche et photo de profil
         html.Div(
@@ -471,6 +472,7 @@ def update_menu_text_display(sidebar_width):
                 href="#",
             ),
         ]
+
 
 # Exécution de l'application
 if __name__ == "__main__":
