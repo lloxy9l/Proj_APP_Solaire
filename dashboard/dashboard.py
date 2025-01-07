@@ -1,7 +1,48 @@
 import dash
 from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
+import plotly.express as px
+from datetime import datetime
+from config_bdd import host, user, password, database
+import mysql.connector
+import pandas as pd
 
+# Fonction pour récupérer les données
+def fetch_data():
+    conn = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        database=database,
+        charset="utf8",
+    )
+    with conn.cursor(dictionary=True) as c:
+        c.execute("""
+            SELECT p.latitude, p.longitude, m.temperature, 
+                   m.ensoleillement,m.irradiance,m.precipitation, m.date_collecte 
+            FROM 2026_solarx_pointsgps p
+            JOIN 2026_solarx_mesures m 
+            ON p.idpoint = m.idpoint;
+        """)
+        data = c.fetchall()
+    conn.close()
+    print('Data collected')
+    # Convertir les données en DataFrame
+    df = pd.DataFrame(data)
+    df["date_collecte"] = pd.to_datetime(df["date_collecte"])
+    df["temperature"] = pd.to_numeric(df["temperature"], errors='coerce')
+    df["irradiance"] = pd.to_numeric(df["irradiance"], errors='coerce')
+    df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
+    df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
+    return df
+
+
+# Charger les données
+data = fetch_data()
+df = pd.DataFrame(data)
+# Calculer la moyenne des valeurs pour chaque point GPS
+mean_data = df.groupby(["latitude", "longitude"]).mean().reset_index()
+print('Data Fetched')
 # Initialisation de l'application Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -263,17 +304,18 @@ main_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-1",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [10, 15, 13, 17],
-                                                "type": "line",
-                                                "name": "Température",
-                                            }
-                                        ],
-                                        "layout": {"title": "Température"},
-                                    },
+                                    figure = px.scatter_mapbox(
+                                        mean_data,
+                                        lat="latitude",
+                                        lon="longitude",
+                                        color="temperature",  # Affichage basé sur la température moyenne
+                                        color_continuous_scale="Plasma",  # Palette de couleurs
+                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        size=[200 for _ in range(len(mean_data))],
+                                        mapbox_style="carto-positron",
+                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
+                                       
+                                    ),
                                 )
                             ]
                         ),
@@ -438,17 +480,18 @@ ensoleillement_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-1",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [10, 15, 13, 17],
-                                                "type": "line",
-                                                "name": "Température",
-                                            }
-                                        ],
-                                        "layout": {"title": "Température"},
-                                    },
+                                    figure = px.scatter_mapbox(
+                                        mean_data,
+                                        lat="latitude",
+                                        lon="longitude",
+                                        color="ensoleillement",  # Affichage basé sur la température moyenne
+                                        color_continuous_scale="Plasma",  # Palette de couleurs
+                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        size=[200 for _ in range(len(mean_data))],
+                                        mapbox_style="carto-positron",
+                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
+                                       
+                                    ),
                                 )
                             ]
                         ),
@@ -724,17 +767,18 @@ temperature_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-1",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [10, 15, 13, 17],
-                                                "type": "line",
-                                                "name": "Température",
-                                            }
-                                        ],
-                                        "layout": {"title": "Température"},
-                                    },
+                                    figure = px.scatter_mapbox(
+                                        mean_data,
+                                        lat="latitude",
+                                        lon="longitude",
+                                        color="ensoleillement",  # Affichage basé sur la température moyenne
+                                        color_continuous_scale="Plasma",  # Palette de couleurs
+                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        size=[200 for _ in range(len(mean_data))],
+                                        mapbox_style="carto-positron",
+                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
+                                       
+                                    ),
                                 )
                             ]
                         ),
@@ -1007,19 +1051,20 @@ precipitations_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                dcc.Graph(
+                               dcc.Graph(
                                     id="graph-1",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [10, 15, 13, 17],
-                                                "type": "line",
-                                                "name": "Température",
-                                            }
-                                        ],
-                                        "layout": {"title": "Température"},
-                                    },
+                                    figure = px.scatter_mapbox(
+                                        mean_data,
+                                        lat="latitude",
+                                        lon="longitude",
+                                        color="precipitation",  # Affichage basé sur la température moyenne
+                                        color_continuous_scale="Blues",  # Palette de couleurs
+                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        size=[200 for _ in range(len(mean_data))],
+                                        mapbox_style="carto-positron",
+                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
+                                       
+                                    ),
                                 )
                             ]
                         ),
@@ -1295,17 +1340,18 @@ electricite_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-1",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [10, 15, 13, 17],
-                                                "type": "line",
-                                                "name": "Température",
-                                            }
-                                        ],
-                                        "layout": {"title": "Température"},
-                                    },
+                                    figure = px.scatter_mapbox(
+                                        mean_data,
+                                        lat="latitude",
+                                        lon="longitude",
+                                        color="irradiance",  # Affichage basé sur la température moyenne
+                                        color_continuous_scale="Plasma",  # Palette de couleurs
+                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        size=[200 for _ in range(len(mean_data))],
+                                        mapbox_style="carto-positron",
+                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
+                                       
+                                    ),
                                 )
                             ]
                         ),

@@ -25,7 +25,7 @@ def fetch_data():
         """)
         data = c.fetchall()
     conn.close()
-    
+    print('Data collected')
     # Convertir les données en DataFrame
     df = pd.DataFrame(data)
     df["date_collecte"] = pd.to_datetime(df["date_collecte"])
@@ -34,7 +34,8 @@ def fetch_data():
     df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
     df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
     return df
-print('Data collected')
+
+
 # Charger les données
 data = fetch_data()
 df = pd.DataFrame(data)
@@ -76,8 +77,8 @@ def update_map(selected_index):
     # Filtrer les données pour la date sélectionnée
     filtered_data = df[df["date_collecte"].dt.strftime("%Y-%m-%d") == selected_date]
 
-    value="ensoleillement" #a changer avec le callback 
-    
+    value="precipitation" #a changer avec le callback 
+
     # Créer la carte avec scatter_mapbox
     fig = px.scatter_mapbox(
         filtered_data,
