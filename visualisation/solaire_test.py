@@ -18,7 +18,7 @@ def fetch_data():
     with conn.cursor(dictionary=True) as c:
         c.execute("""
             SELECT p.latitude, p.longitude, m.temperature, 
-                   m.ensoleillement, m.date_collecte 
+                   m.ensoleillement,m.irradiance,m.precipitation, m.date_collecte 
             FROM 2026_solarx_pointsgps p
             JOIN 2026_solarx_mesures m 
             ON p.idpoint = m.idpoint;
@@ -30,6 +30,8 @@ def fetch_data():
     df = pd.DataFrame(data)
     df["date_collecte"] = pd.to_datetime(df["date_collecte"])
     df["temperature"] = pd.to_numeric(df["temperature"], errors='coerce')
+    df["irradiance"] = pd.to_numeric(df["irradiance"], errors='coerce')
+    df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
     df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
     return df
 print('Data collected')
@@ -79,7 +81,7 @@ def update_map(selected_index):
         filtered_data,
         lat="latitude",
         lon="longitude",
-        color="ensoleillement",  # Coloration par température
+        color="ensoleillement",  # Coloration par température a changer avec le callback
         color_continuous_scale="Plasma",  # Échelle de couleur
         hover_data=["temperature", "ensoleillement"],  # Données affichées au survol
         center=dict(lat=46.2047, lon=6.14231),
