@@ -1,9 +1,70 @@
 import dash
 from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
+from search import Search
+import mysql.connector
+import pandas as pd
+
+#database
+connection = mysql.connector.connect(
+    host="projet-idu.hqbr.win",  
+    user="dev",  
+    password="9e*s@@iCFNs#r8", 
+    database="projet_solarx", 
+    connection_timeout=30 
+)
+
+cursor = connection.cursor()
+cursor.execute("SHOW TABLES")  # Consulta para obter todos os nomes das tabelas
+tables = cursor.fetchall()  # Retorna os nomes das tabelas
+
+for table in tables:
+    table_name = table[0]
+    cursor.execute(f"SELECT * FROM {table_name}")  
+    results = cursor.fetchall()  
+    df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])  
+
+cursor.close()
+
 
 # Initialisation de l'application Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+#search
+search = Search()
+
+app.layout = html.Div([
+    dcc.Input(
+        id="search-input",
+        type="text",
+        placeholder="Rechercher...",
+        style={
+            "width": "100%",
+            "padding": "10px 10px 10px 50px",
+            "border-radius": "2em",
+            "border": "2px solid #005DFF",
+            "background-color": "#f8f8f8",
+            "font-size": "18px",
+            "outline": "none",
+        },
+    ),
+    html.Div(id="search-results")  # Div para mostrar os resultados da pesquisa
+])
+
+# Callback para atualizar os resultados da pesquisa
+@app.callback(
+    Output('search-results', 'children'),
+    Input('search-input', 'value')
+)
+def update_search_results(query):
+    # Usando a instância de Search para filtrar e retornar os resultados
+    results = search.search_data(query)
+    
+    # Exibindo os resultados ou mensagem caso não haja resultados
+    if isinstance(results, str):
+        return results
+    return html.Div([html.Div(result) for result in results])
+
 
 
 # Style général pour la barre latérale
@@ -477,3 +538,6 @@ def update_menu_text_display(sidebar_width):
 # Exécution de l'application
 if __name__ == "__main__":
     app.run_server(debug=True)
+
+connection.close()
+
