@@ -172,7 +172,6 @@ vertical_header = html.Div(
         ),
     ],
 )
-
 # Contenu principal
 main_content = html.Div(
     style={
@@ -180,7 +179,7 @@ main_content = html.Div(
         "width": "100%",
     },
     id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
-    
+
     children=[
         # Barre de recherche et photo de profil
         html.Div(
@@ -312,17 +311,19 @@ main_content = html.Div(
         html.Div(
             style={
                 "display": "grid",
-                "grid-template-columns": "1fr 1fr",  # Grille 2x2
+                "grid-template-rows": "auto 1fr",  # Première ligne de taille automatique (pour le titre), deuxième ligne flexible
+                "grid-template-columns": "1fr",  # Une seule colonne pour la première ligne
                 "gap": "20px",  # Espace entre les cartes
             },
             children=[
+                # Première ligne - 1 colonne
                 dbc.Card(
                     [
                         dbc.CardBody(
                             [
                                 dcc.Graph(
                                     id="graph-1",
-                                    figure = px.scatter_mapbox(
+                                    figure=px.scatter_mapbox(
                                         mean_data,
                                         lat="latitude",
                                         lon="longitude",
@@ -332,56 +333,71 @@ main_content = html.Div(
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                       
                                     ),
                                 )
                             ]
                         ),
                     ]
                 ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
+
+                # Deuxième ligne - 2 colonnes
+                html.Div(
+                    style={
+                        "display": "grid",
+                        "grid-template-columns": "1fr 1fr",  # 2 colonnes
+                        "gap": "20px",  # Espacement entre les cartes
+                    },
+                    children=[
+                        # Deuxième carte
+                        dbc.Card(
                             [
-                                dcc.Graph(
-                                    id="graph-2",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "values": [50, 30, 20],
-                                                "labels": ["Soleil", "Nuages", "Pluie"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Météo"},
-                                    },
-                                )
+                                dbc.CardBody(
+                                    [
+                                        dcc.Graph(
+                                            id="graph-2",
+                                            figure={
+                                                "data": [
+                                                    {
+                                                        "values": [50, 30, 20],
+                                                        "labels": ["Soleil", "Nuages", "Pluie"],
+                                                        "type": "pie",
+                                                    }
+                                                ],
+                                                "layout": {"title": "Météo"},
+                                            },
+                                        )
+                                    ]
+                                ),
                             ]
                         ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
+
+                        # Troisième carte
+                        dbc.Card(
                             [
-                                dcc.Graph(
-                                    id="graph-3",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
-                                                "y": [12, 19, 3, 5, 2],
-                                                "type": "bar",
-                                                "name": "Précipitations",
-                                            }
-                                        ],
-                                        "layout": {"title": "Précipitations"},
-                                    },
-                                )
+                                dbc.CardBody(
+                                    [
+                                        dcc.Graph(
+                                            id="graph-3",
+                                            figure={
+                                                "data": [
+                                                    {
+                                                        "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
+                                                        "y": [12, 19, 3, 5, 2],
+                                                        "type": "bar",
+                                                        "name": "Précipitations",
+                                                    }
+                                                ],
+                                                "layout": {"title": "Précipitations"},
+                                            },
+                                        )
+                                    ]
+                                ),
                             ]
                         ),
-                    ]
+                    ],
                 ),
+
+                # Carte 4 (si vous voulez en ajouter une autre, vous pouvez la placer dans cette section)
                 dbc.Card(
                     [
                         dbc.CardBody(
@@ -983,7 +999,6 @@ temperature_content = html.Div(
     ],
 )
 
-
 # Contenu Précipitations
 precipitations_content = html.Div(
     style={
@@ -1051,50 +1066,67 @@ precipitations_content = html.Div(
                 ),
             ],
         ),
+        
+        # Titre de la section
         html.H1(
             "Précipitations",  # Nom de la page
             style={
                 "font-size": "36px",  # Taille de la police
                 "margin-bottom": "20px",  # Espace en dessous du titre
             },
-        ),        # Section des cartes pour les graphiques en 3x3
+        ),
+        
+        # Section des cartes pour les graphiques en 1x3 pour la première ligne, puis 3 colonnes sur la deuxième ligne
         html.Div(
             style={
                 "display": "grid",
-                "grid-template-columns": "repeat(3, 1fr)",  # Grille 3x3
-                "gap": "20px",  # Espace entre les cartes
+                "grid-template-columns": "1fr",  # 1 seule colonne sur la première ligne
+                "gap": "20px",  # Espacement entre les cartes
+                "margin-bottom": "20px",
             },
             children=[
+                # Première carte (ligne 1)
                 dbc.Card(
                     [
                         dbc.CardBody(
                             [
                                dcc.Graph(
                                     id="graph-1",
-                                    figure = px.scatter_mapbox(
+                                    figure=px.scatter_mapbox(
                                         mean_data,
                                         lat="latitude",
                                         lon="longitude",
-                                        color="precipitation",  # Affichage basé sur la température moyenne
+                                        color="precipitation",  # Affichage basé sur la précipitation
                                         color_continuous_scale="Blues",  # Palette de couleurs
                                         hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                       
                                     ),
                                 )
                             ]
                         ),
                     ]
                 ),
+            ],
+        ),
+        
+        # Deuxième ligne - 3 colonnes
+        html.Div(
+            style={
+                "display": "grid",
+                "grid-template-columns": "repeat(3, 1fr)",  # 3 colonnes
+                "gap": "20px",  # Espacement entre les cartes
+            },
+            children=[
+                # Deuxième carte
                 dbc.Card(
                     [
                         dbc.CardBody(
                             [
                                 dcc.Graph(
                                     id="graph-2",
-                                    figure={
+                                    figure={ 
                                         "data": [
                                             {
                                                 "values": [50, 30, 20],
@@ -1109,6 +1141,8 @@ precipitations_content = html.Div(
                         ),
                     ]
                 ),
+                
+                # Troisième carte
                 dbc.Card(
                     [
                         dbc.CardBody(
@@ -1131,6 +1165,8 @@ precipitations_content = html.Div(
                         ),
                     ]
                 ),
+                
+                # Quatrième carte
                 dbc.Card(
                     [
                         dbc.CardBody(
@@ -1148,116 +1184,6 @@ precipitations_content = html.Div(
                                             }
                                         ],
                                         "layout": {"title": "Données diverses"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-5",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [9, 14, 11, 18],
-                                                "type": "line",
-                                                "name": "Graphique 5",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 5"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-6",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "values": [60, 25, 15],
-                                                "labels": ["Soleil", "Nuages", "Pluie"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 6"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-7",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [14, 11, 16, 20],
-                                                "type": "bar",
-                                                "name": "Graphique 7",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 7"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-8",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [5, 8, 7, 10],
-                                                "type": "scatter",
-                                                "mode": "markers",
-                                                "name": "Graphique 8",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 8"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-9",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [13, 15, 9, 18],
-                                                "type": "line",
-                                                "name": "Graphique 9",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 9"},
                                     },
                                 )
                             ]
