@@ -178,10 +178,10 @@ vertical_header = html.Div(
 # Contenu principal
 main_content = html.Div(
     style={
-        "margin-left": "80px",  # Décale le contenu principal à droite du header
         "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
         "width": "100%",
     },
+    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
     
     children=[
         # Barre de recherche et photo de profil
@@ -412,6 +412,1149 @@ main_content = html.Div(
 )
 
 
+# Contenu ensoleillement
+ensoleillement_content = html.Div(
+    style={
+        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
+        "width": "100%",
+    },
+    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
+    
+    children=[
+        # Barre de recherche et photo de profil
+        html.Div(
+            style={
+                "display": "flex",
+                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
+                "align-items": "center",  # Alignement vertical
+                "margin-bottom": "20px",
+            },
+            children=[
+                # Barre de recherche moderne
+                html.Div(
+                    style={
+                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
+                        "width": "50%",
+                    },
+                    children=[
+                        html.Div(
+                            style={
+                                "position": "absolute",
+                                "left": "10px",
+                                "top": "50%",
+                                "transform": "translateY(-50%)",
+                            },
+                            children=[
+                                html.Img(
+                                    src="assets/img/search-icon.png",
+                                    style={"width": "30px", "height": "30px"},
+                                ),
+                            ],
+                        ),
+                        dcc.Input(
+                            id="search-input",
+                            type="text",
+                            placeholder="Rechercher...",
+                            style={
+                                "width": "100%",
+                                "padding": "10px 10px 10px 50px",
+                                "border-radius": "2em",
+                                "border": "2px solid #005DFF",
+                                "background-color": "#f8f8f8",
+                                "font-size": "18px",
+                                "outline": "none",
+                            },
+                        ),
+                    ],
+                ),
+                # Photo de profil
+                html.Img(
+                    src="assets/img/profile.png",
+                    style={
+                        "width": "65px",
+                        "height": "65px",
+                        "border-radius": "50%",
+                        "border": "2px solid #fff",
+                    },
+                ),
+            ],
+        ),
+        html.H1(
+            "Ensoleillement",  # Nom de la page
+            style={
+                "font-size": "36px",  # Taille de la police
+                "margin-bottom": "20px",  # Espace en dessous du titre
+            },
+        ),        # Section des cartes pour les graphiques en 3x3
+        html.Div(
+            style={
+                "display": "grid",
+                "grid-template-columns": "repeat(3, 1fr)",  # Grille 3x3
+                "gap": "20px",  # Espace entre les cartes
+            },
+            children=[
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-1",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [10, 15, 13, 17],
+                                                "type": "line",
+                                                "name": "Température",
+                                            }
+                                        ],
+                                        "layout": {"title": "Température"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-2",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [50, 30, 20],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Météo"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-3",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
+                                                "y": [12, 19, 3, 5, 2],
+                                                "type": "bar",
+                                                "name": "Précipitations",
+                                            }
+                                        ],
+                                        "layout": {"title": "Précipitations"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-4",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [3, 4, 5, 6],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Points",
+                                            }
+                                        ],
+                                        "layout": {"title": "Données diverses"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-5",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [9, 14, 11, 18],
+                                                "type": "line",
+                                                "name": "Graphique 5",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 5"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-6",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [60, 25, 15],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 6"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-7",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [14, 11, 16, 20],
+                                                "type": "bar",
+                                                "name": "Graphique 7",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 7"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-8",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [5, 8, 7, 10],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Graphique 8",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 8"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-9",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [13, 15, 9, 18],
+                                                "type": "line",
+                                                "name": "Graphique 9",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 9"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+            ],
+        ),
+    ],
+)
+
+
+
+# Contenu temperature
+temperature_content = html.Div(
+    style={
+        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
+        "width": "100%",
+    },
+    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
+    
+    children=[
+        # Barre de recherche et photo de profil
+        html.Div(
+            style={
+                "display": "flex",
+                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
+                "align-items": "center",  # Alignement vertical
+                "margin-bottom": "20px",
+            },
+            children=[
+                # Barre de recherche moderne
+                html.Div(
+                    style={
+                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
+                        "width": "50%",
+                    },
+                    children=[
+                        html.Div(
+                            style={
+                                "position": "absolute",
+                                "left": "10px",
+                                "top": "50%",
+                                "transform": "translateY(-50%)",
+                            },
+                            children=[
+                                html.Img(
+                                    src="assets/img/search-icon.png",
+                                    style={"width": "30px", "height": "30px"},
+                                ),
+                            ],
+                        ),
+                        dcc.Input(
+                            id="search-input",
+                            type="text",
+                            placeholder="Rechercher...",
+                            style={
+                                "width": "100%",
+                                "padding": "10px 10px 10px 50px",
+                                "border-radius": "2em",
+                                "border": "2px solid #005DFF",
+                                "background-color": "#f8f8f8",
+                                "font-size": "18px",
+                                "outline": "none",
+                            },
+                        ),
+                    ],
+                ),
+                # Photo de profil
+                html.Img(
+                    src="assets/img/profile.png",
+                    style={
+                        "width": "65px",
+                        "height": "65px",
+                        "border-radius": "50%",
+                        "border": "2px solid #fff",
+                    },
+                ),
+            ],
+        ),
+        html.H1(
+            "Temperature",  # Nom de la page
+            style={
+                "font-size": "36px",  # Taille de la police
+                "margin-bottom": "20px",  # Espace en dessous du titre
+            },
+        ),        # Section des cartes pour les graphiques en 3x3
+        html.Div(
+            style={
+                "display": "grid",
+                "grid-template-columns": "repeat(3, 1fr)",  # Grille 3x3
+                "gap": "20px",  # Espace entre les cartes
+            },
+            children=[
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-1",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [10, 15, 13, 17],
+                                                "type": "line",
+                                                "name": "Température",
+                                            }
+                                        ],
+                                        "layout": {"title": "Température"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-2",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [50, 30, 20],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Météo"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-3",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
+                                                "y": [12, 19, 3, 5, 2],
+                                                "type": "bar",
+                                                "name": "Précipitations",
+                                            }
+                                        ],
+                                        "layout": {"title": "Précipitations"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-4",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [3, 4, 5, 6],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Points",
+                                            }
+                                        ],
+                                        "layout": {"title": "Données diverses"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-5",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [9, 14, 11, 18],
+                                                "type": "line",
+                                                "name": "Graphique 5",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 5"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-6",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [60, 25, 15],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 6"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-7",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [14, 11, 16, 20],
+                                                "type": "bar",
+                                                "name": "Graphique 7",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 7"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-8",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [5, 8, 7, 10],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Graphique 8",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 8"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-9",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [13, 15, 9, 18],
+                                                "type": "line",
+                                                "name": "Graphique 9",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 9"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+            ],
+        ),
+    ],
+)
+
+
+# Contenu Précipitations
+precipitations_content = html.Div(
+    style={
+        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
+        "width": "100%",
+    },
+    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
+    
+    children=[
+        # Barre de recherche et photo de profil
+        html.Div(
+            style={
+                "display": "flex",
+                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
+                "align-items": "center",  # Alignement vertical
+                "margin-bottom": "20px",
+            },
+            children=[
+                # Barre de recherche moderne
+                html.Div(
+                    style={
+                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
+                        "width": "50%",
+                    },
+                    children=[
+                        html.Div(
+                            style={
+                                "position": "absolute",
+                                "left": "10px",
+                                "top": "50%",
+                                "transform": "translateY(-50%)",
+                            },
+                            children=[
+                                html.Img(
+                                    src="assets/img/search-icon.png",
+                                    style={"width": "30px", "height": "30px"},
+                                ),
+                            ],
+                        ),
+                        dcc.Input(
+                            id="search-input",
+                            type="text",
+                            placeholder="Rechercher...",
+                            style={
+                                "width": "100%",
+                                "padding": "10px 10px 10px 50px",
+                                "border-radius": "2em",
+                                "border": "2px solid #005DFF",
+                                "background-color": "#f8f8f8",
+                                "font-size": "18px",
+                                "outline": "none",
+                            },
+                        ),
+                    ],
+                ),
+                # Photo de profil
+                html.Img(
+                    src="assets/img/profile.png",
+                    style={
+                        "width": "65px",
+                        "height": "65px",
+                        "border-radius": "50%",
+                        "border": "2px solid #fff",
+                    },
+                ),
+            ],
+        ),
+        html.H1(
+            "Précipitations",  # Nom de la page
+            style={
+                "font-size": "36px",  # Taille de la police
+                "margin-bottom": "20px",  # Espace en dessous du titre
+            },
+        ),        # Section des cartes pour les graphiques en 3x3
+        html.Div(
+            style={
+                "display": "grid",
+                "grid-template-columns": "repeat(3, 1fr)",  # Grille 3x3
+                "gap": "20px",  # Espace entre les cartes
+            },
+            children=[
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-1",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [10, 15, 13, 17],
+                                                "type": "line",
+                                                "name": "Température",
+                                            }
+                                        ],
+                                        "layout": {"title": "Température"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-2",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [50, 30, 20],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Météo"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-3",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
+                                                "y": [12, 19, 3, 5, 2],
+                                                "type": "bar",
+                                                "name": "Précipitations",
+                                            }
+                                        ],
+                                        "layout": {"title": "Précipitations"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-4",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [3, 4, 5, 6],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Points",
+                                            }
+                                        ],
+                                        "layout": {"title": "Données diverses"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-5",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [9, 14, 11, 18],
+                                                "type": "line",
+                                                "name": "Graphique 5",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 5"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-6",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [60, 25, 15],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 6"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-7",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [14, 11, 16, 20],
+                                                "type": "bar",
+                                                "name": "Graphique 7",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 7"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-8",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [5, 8, 7, 10],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Graphique 8",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 8"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-9",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [13, 15, 9, 18],
+                                                "type": "line",
+                                                "name": "Graphique 9",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 9"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+            ],
+        ),
+    ],
+)
+
+
+
+# Contenu Electricité
+electricite_content = html.Div(
+    style={
+        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
+        "width": "100%",
+    },
+    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
+    
+    children=[
+        # Barre de recherche et photo de profil
+        html.Div(
+            style={
+                "display": "flex",
+                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
+                "align-items": "center",  # Alignement vertical
+                "margin-bottom": "20px",
+            },
+            children=[
+                # Barre de recherche moderne
+                html.Div(
+                    style={
+                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
+                        "width": "50%",
+                    },
+                    children=[
+                        html.Div(
+                            style={
+                                "position": "absolute",
+                                "left": "10px",
+                                "top": "50%",
+                                "transform": "translateY(-50%)",
+                            },
+                            children=[
+                                html.Img(
+                                    src="assets/img/search-icon.png",
+                                    style={"width": "30px", "height": "30px"},
+                                ),
+                            ],
+                        ),
+                        dcc.Input(
+                            id="search-input",
+                            type="text",
+                            placeholder="Rechercher...",
+                            style={
+                                "width": "100%",
+                                "padding": "10px 10px 10px 50px",
+                                "border-radius": "2em",
+                                "border": "2px solid #005DFF",
+                                "background-color": "#f8f8f8",
+                                "font-size": "18px",
+                                "outline": "none",
+                            },
+                        ),
+                    ],
+                ),
+                # Photo de profil
+                html.Img(
+                    src="assets/img/profile.png",
+                    style={
+                        "width": "65px",
+                        "height": "65px",
+                        "border-radius": "50%",
+                        "border": "2px solid #fff",
+                    },
+                ),
+            ],
+        ),
+        html.H1(
+            "Electricité",  # Nom de la page
+            style={
+                "font-size": "36px",  # Taille de la police
+                "margin-bottom": "20px",  # Espace en dessous du titre
+            },
+        ),        # Section des cartes pour les graphiques en 3x3
+        html.Div(
+            style={
+                "display": "grid",
+                "grid-template-columns": "repeat(3, 1fr)",  # Grille 3x3
+                "gap": "20px",  # Espace entre les cartes
+            },
+            children=[
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-1",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [10, 15, 13, 17],
+                                                "type": "line",
+                                                "name": "Température",
+                                            }
+                                        ],
+                                        "layout": {"title": "Température"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-2",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [50, 30, 20],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Météo"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-3",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
+                                                "y": [12, 19, 3, 5, 2],
+                                                "type": "bar",
+                                                "name": "Précipitations",
+                                            }
+                                        ],
+                                        "layout": {"title": "Précipitations"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-4",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [3, 4, 5, 6],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Points",
+                                            }
+                                        ],
+                                        "layout": {"title": "Données diverses"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-5",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [9, 14, 11, 18],
+                                                "type": "line",
+                                                "name": "Graphique 5",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 5"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-6",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "values": [60, 25, 15],
+                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "type": "pie",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 6"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-7",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [14, 11, 16, 20],
+                                                "type": "bar",
+                                                "name": "Graphique 7",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 7"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-8",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [5, 8, 7, 10],
+                                                "type": "scatter",
+                                                "mode": "markers",
+                                                "name": "Graphique 8",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 8"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+                dbc.Card(
+                    [
+                        dbc.CardBody(
+                            [
+                                dcc.Graph(
+                                    id="graph-9",
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": [1, 2, 3, 4],
+                                                "y": [13, 15, 9, 18],
+                                                "type": "line",
+                                                "name": "Graphique 9",
+                                            }
+                                        ],
+                                        "layout": {"title": "Graphique 9"},
+                                    },
+                                )
+                            ]
+                        ),
+                    ]
+                ),
+            ],
+        ),
+    ],
+)
+
+
+
 # Disposition principale
 app.layout = html.Div(
     style={"display": "flex"},
@@ -419,8 +1562,28 @@ app.layout = html.Div(
         dcc.Store(id="sidebar-width", data="80px"),  # Stocker la largeur actuelle de la barre latérale
         vertical_header,
         main_content,
+        dcc.Location(id='url', refresh=False),  # Composant Location pour détecter l'URL
     ],
 )
+
+# Callback pour changer le contenu principal en fonction de l'URL
+@app.callback(
+    Output('main-content', 'children'),
+    Input('url', 'pathname')
+)
+def display_content(pathname):
+    if pathname == "/home":
+        return main_content
+    elif pathname == "/ensoleillement":
+        return ensoleillement_content
+    elif pathname == "/temperature":
+        return temperature_content
+    elif pathname == "/precipitations":
+        return precipitations_content
+    elif pathname == "/electricite":
+        return electricite_content
+    else:
+        return html.H1("Page non trouvée")
 
 # Callback pour changer la largeur de la barre latérale
 @app.callback(
@@ -463,21 +1626,21 @@ def update_menu_text_display(sidebar_width):
                     html.Img(src="assets/img/home.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Accueil", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
                 ],
-                href="#",
+                href="/home",
             ),
             html.A(
                 children=[
                     html.Img(src="assets/img/sun.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Rapports", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                    html.Span("Ensoleillement", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
                 ],
-                href="#",
+                href="/ensoleillement",
             ),
             html.A(
                 children=[
                     html.Img(src="assets/img/thermometer.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Température", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
                 ],
-                href="#",
+                href="/temperature",
             ),
             html.A(
                 children=[
@@ -491,7 +1654,7 @@ def update_menu_text_display(sidebar_width):
                     html.Img(src="assets/img/lightning.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Electricité", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
                 ],
-                href="#",
+                href="/electricite",
             ),
         ]
     else:
@@ -502,35 +1665,35 @@ def update_menu_text_display(sidebar_width):
                     html.Img(src="assets/img/home.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Accueil", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
                 ],
-                href="#",
+                href="/home",
             ),
             html.A(
                 children=[
                     html.Img(src="assets/img/sun.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Ensoleillement", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
                 ],
-                href="#",
+                href="/ensoleillement",
             ),
             html.A(
                 children=[
                     html.Img(src="assets/img/thermometer.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Température", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
                 ],
-                href="#",
+                href="/temperature",
             ),
             html.A(
                 children=[
                     html.Img(src="assets/img/rain.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Précipitations", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
                 ],
-                href="#",
+                href="/precipitations",
             ),
             html.A(
                 children=[
                     html.Img(src="assets/img/lightning.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
                     html.Span("Electricité", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
                 ],
-                href="#",
+                href="electricite",
             ),
         ]
 
