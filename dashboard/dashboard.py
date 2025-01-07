@@ -54,7 +54,7 @@ df_conso = pd.DataFrame(data_conso)
 mean_data = df.groupby(["latitude", "longitude"]).mean().reset_index()
 global_means = {
     "temperature": df["temperature"].mean(),
-    "ensoleillement": df["ensoleillement"].mean(),
+    "ensoleillement": df["ensoleillement"].mean()/3600,
     "irradiance": df["irradiance"].mean(),
     "precipitation": df["precipitation"].mean(),
     "consommation":df_conso["consommation"].mean(),
@@ -277,7 +277,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Ensoleillement", className="card-title"),
-                                html.P(f"{global_means['ensoleillement']:.2f} s", className="card-text"),
+                                html.P(f"{global_means['ensoleillement']:.2f} heures", className="card-text"),
                             ]
                         ),
                     ],
@@ -329,7 +329,7 @@ main_content = html.Div(
                                         lon="longitude",
                                         color="temperature",  # Affichage basé sur la température moyenne
                                         color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        hover_data=["temperature"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
@@ -520,7 +520,7 @@ ensoleillement_content = html.Div(
                                         lon="longitude",
                                         color="ensoleillement",  # Affichage basé sur la température moyenne
                                         color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        hover_data=["ensoleillement"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
@@ -807,7 +807,7 @@ temperature_content = html.Div(
                                         lon="longitude",
                                         color="ensoleillement",  # Affichage basé sur la température moyenne
                                         color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        hover_data=["ensoleillement"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
@@ -1098,7 +1098,7 @@ precipitations_content = html.Div(
                                         lon="longitude",
                                         color="precipitation",  # Affichage basé sur la précipitation
                                         color_continuous_scale="Blues",  # Palette de couleurs
-                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        hover_data=["precipitation"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
@@ -1290,7 +1290,7 @@ electricite_content = html.Div(
                                         lon="longitude",
                                         color="irradiance",  # Affichage basé sur la température moyenne
                                         color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["temperature", "irradiance", "precipitation", "ensoleillement"],  # Infos affichées au survol
+                                        hover_data=["irradiance"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
