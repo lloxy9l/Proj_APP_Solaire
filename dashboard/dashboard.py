@@ -1557,7 +1557,9 @@ app.layout = html.Div(
     Input('url', 'pathname')
 )
 def display_content(pathname):
-    if pathname == "/home":
+    if pathname == '/':
+        return main_content
+    elif pathname == "/home":
         return main_content
     elif pathname == "/ensoleillement":
         return ensoleillement_content
