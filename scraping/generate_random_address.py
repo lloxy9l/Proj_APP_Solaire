@@ -93,8 +93,8 @@ def insert_point_into_bdd(data):
 
             # Fetch idpoint for the newly inserted point
             c.execute(
-                "SELECT idpoint FROM 2026_solarx_pointsgps WHERE adresse = %s",
-                (address,),
+                "SELECT idpoint FROM 2026_solarx_pointsgps  WHERE ROUND(latitude, 4) = %s and ROUND(longitude, 4)=%s",
+                (latitude,longitude),
             )
           
             id_point_result = c.fetchall()
@@ -111,7 +111,7 @@ def insert_point_into_bdd(data):
 
             # Insert into appartient table
             c.execute(
-                "INSERT INTO 2026_solarx_appartient (idpoint, idzone) VALUES (%s, %s)",
+                "INSERT IGNORE INTO 2026_solarx_appartient (idpoint, idzone) VALUES (%s, %s)",
                 (id_point, idzone),
             )
             db.commit()

@@ -36,7 +36,7 @@ def scrapping(lat,long):
         params = {
             "latitude": lat,
             "longitude": long,
-            "start_date": "2024-01-01",
+            "start_date": "2019-01-01",
             "end_date": todays_date,
             "daily": ["sunshine_duration", "temperature_2m_max","temperature_2m_min", "precipitation_sum"]
         }

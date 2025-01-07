@@ -1,9 +1,10 @@
 import dash
 from dash import html, dcc, Input, Output
-import dash_leaflet as dl
+import plotly.express as px
 from datetime import datetime
 from config_bdd import host, user, password, database
 import mysql.connector
+import pandas as pd
 
 # Fonction pour récupérer les données
 def fetch_data():
@@ -12,42 +13,41 @@ def fetch_data():
         user=user,
         password=password,
         database=database,
-        charset="utf8"
+        charset="utf8",
     )
     with conn.cursor(dictionary=True) as c:
         c.execute("""
             SELECT p.latitude, p.longitude, m.temperature, 
-                   m.ensoleillement, m.date_collecte 
+                   m.ensoleillement,m.irradiance,m.precipitation, m.date_collecte 
             FROM 2026_solarx_pointsgps p
             JOIN 2026_solarx_mesures m 
             ON p.idpoint = m.idpoint;
         """)
         data = c.fetchall()
     conn.close()
-    
-    # Convertir `date_collecte` en datetime et gérer les valeurs None
-    for row in data:
-        row["date_collecte"] = datetime.strptime(row["date_collecte"], "%Y-%m-%d %H:%M:%S")
-        
-        # Vérifier si la valeur n'est pas None avant de convertir en float
-        row["temperature"] = float(row["temperature"]) if row["temperature"] is not None else -666
-        row["ensoleillement"] = float(row["ensoleillement"]) if row["ensoleillement"] is not None else -666
-    
-    return data
+    print('Data collected')
+    # Convertir les données en DataFrame
+    df = pd.DataFrame(data)
+    df["date_collecte"] = pd.to_datetime(df["date_collecte"])
+    df["temperature"] = pd.to_numeric(df["temperature"], errors='coerce')
+    df["irradiance"] = pd.to_numeric(df["irradiance"], errors='coerce')
+    df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
+    df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
+    return df
 
-# Charger les données depuis la base
+
+# Charger les données
 data = fetch_data()
-
-# Extraire les plages de dates pour le sélecteur
-unique_dates = sorted({row["date_collecte"].strftime("%Y-%m-%d") for row in data})
-date_map = {date: i for i, date in enumerate(unique_dates)}  # Date à index
-
+df = pd.DataFrame(data)
+# Extraire les dates uniques pour le sélecteur
+unique_dates = sorted(data["date_collecte"].dt.strftime("%Y-%m-%d").unique())
+print('Data Fetched')
 # Application Dash
 app = dash.Dash(__name__)
 
 # Mise en page
 app.layout = html.Div([
-    # Affichage du slider de date
+    # Sélecteur de date
     html.Div([
         html.Label("Sélectionnez une date :"),
         dcc.Slider(
@@ -55,54 +55,47 @@ app.layout = html.Div([
             min=0,
             max=len(unique_dates) - 1,
             step=1,
-            marks={i: unique_dates[i] for i in range(len(unique_dates))},
-            value=0  # La première date est sélectionnée par défaut
+            marks={i: date for i, date in enumerate(unique_dates)},
+            value=0
         ),
         html.Div(id="date-display", style={'margin-top': '10px'})
     ], style={'margin-bottom': '20px'}),
 
-    # Carte Dash Leaflet
-    dl.Map(
-        id="map",
-        children=[dl.TileLayer()],
-        style={'width': '100%', 'height': '500px'},
-        center=(46.2047, 6.14231),  # Centre sur Genève
-        zoom=12
-    )
+    # Carte Plotly
+    dcc.Graph(id='map', style={'width': '100%', 'height': '600px'})
 ])
 
-# Callback pour mettre à jour les marqueurs en fonction de la date sélectionnée
+# Callback pour mettre à jour la heatmap
 @app.callback(
-    [Output("map", "children"),
-     Output("date-display", "children")],
-    Input("date-slider", "value")
+    [Output('map', 'figure'),
+     Output('date-display', 'children')],
+    Input('date-slider', 'value')
 )
 def update_map(selected_index):
     selected_date = unique_dates[selected_index]
-    
+
     # Filtrer les données pour la date sélectionnée
-    filtered_data = [
-        row for row in data if row["date_collecte"].strftime("%Y-%m-%d") == selected_date
-    ]
-    
-    # Créer les marqueurs
-    markers = [
-        dl.Marker(
-            position=[row["latitude"], row["longitude"]],
-            children=dl.Popup(
-                f"Température : {round(row['temperature'], 1)}°C\n"
-                f"Ensoleillement : {round(row['ensoleillement'], 2)} W/m²"
-            )
-        )
-        for row in filtered_data
-    ]
+    filtered_data = df[df["date_collecte"].dt.strftime("%Y-%m-%d") == selected_date]
+
+    value="precipitation" #a changer avec le callback 
+
+    # Créer la carte avec scatter_mapbox
+    fig = px.scatter_mapbox(
+        filtered_data,
+        lat="latitude",
+        lon="longitude",
+        color=value,  # Coloration par température a changer avec le callback
+        color_continuous_scale="Plasma",  # Échelle de couleur
+        hover_data=[value],  # Données affichées au survol
+        center=dict(lat=46.2047, lon=6.14231),
+        mapbox_style="carto-positron",
+        size=[1 for _ in range(len(filtered_data))] 
+    )
 
     # Mettre à jour l'affichage de la date sélectionnée
     date_display = f"Date sélectionnée : {selected_date}"
 
-    # Retourner les éléments mis à jour pour la carte et l'affichage de la date
-    return [dl.TileLayer(), dl.LayerGroup(markers)], date_display
-
+    return fig, date_display
 
 # Lancer l'application
 if __name__ == '__main__':
