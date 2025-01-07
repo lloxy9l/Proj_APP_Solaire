@@ -38,9 +38,11 @@ def fetch_data():
     df["irradiance"] = pd.to_numeric(df["irradiance"], errors='coerce')
     df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
     df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
-
+    df["production"] = pd.to_numeric(df["irradiance"]*365*3, errors='coerce')
     df_conso = pd.DataFrame(data_conso)
     df_conso["consommation"] = pd.to_numeric(df_conso["consommation"], errors='coerce')
+
+    
     return df,df_conso
 
 
@@ -50,14 +52,18 @@ data_meteo=data[0]
 df = pd.DataFrame(data_meteo)
 data_conso = data[1]
 df_conso = pd.DataFrame(data_conso)
+
+
 # Calculer la moyenne des valeurs pour chaque point GPS
 mean_data = df.groupby(["latitude", "longitude"]).mean().reset_index()
+
+
 global_means = {
     "temperature": df["temperature"].mean(),
     "ensoleillement": df["ensoleillement"].mean()/3600,
     "irradiance": df["irradiance"].mean(),
     "precipitation": df["precipitation"].mean(),
-    "consommation":df_conso["consommation"].mean(),
+    "consommation":df_conso["consommation"].mean()/1000,
 }
 
 print('Data Fetched')
@@ -255,7 +261,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Température", className="card-title"),
-                                html.P(f"{global_means['temperature']:.2f}°C", className="card-text"),
+                                html.P(f"{global_means['temperature']:.2f}°C/day", className="card-text"),
                             ]
                         ),
                     ],
@@ -266,7 +272,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Précipitations", className="card-title"),
-                                html.P(f"{global_means['precipitation']:.2f} mm", className="card-text"),
+                                html.P(f"{global_means['precipitation']:.2f} mm/day", className="card-text"),
                             ]
                         ),
                     ],
@@ -277,7 +283,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Ensoleillement", className="card-title"),
-                                html.P(f"{global_means['ensoleillement']:.2f} heures", className="card-text"),
+                                html.P(f"{global_means['ensoleillement']:.2f} heures/day", className="card-text"),
                             ]
                         ),
                     ],
@@ -288,7 +294,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Irradiance", className="card-title"),
-                                html.P(f"{global_means['irradiance']:.2f} W/m^2", className="card-text"),
+                                html.P(f"{global_means['irradiance']:.2f} W/m²/day", className="card-text"),
                             ]
                         ),
                     ],
@@ -299,7 +305,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Consommation éléctrique moyenne", className="card-title"),
-                                html.P(f"{global_means['consommation']:.2f} MWh", className="card-text"),
+                                html.P(f"{global_means['consommation']:.2f} GWh/year", className="card-text"),
                             ]
                         ),
                     ],
@@ -327,13 +333,14 @@ main_content = html.Div(
                                         mean_data,
                                         lat="latitude",
                                         lon="longitude",
-                                        color="temperature",  # Affichage basé sur la température moyenne
-                                        color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["temperature"],  # Infos affichées au survol
-                                        size=[200 for _ in range(len(mean_data))],
+                                        color="production",  # Affichage basé sur la température moyenne
+                                        color_continuous_scale="RdYlGn",  # Palette de couleurs
+                                        hover_data=["production"],  # Infos affichées au survol
+                                        size=[1 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
                                     ),
+                                    style={"cursor": "url('assets/img/panneau.png') 4 12 ,crosshair"},
                                 )
                             ]
                         ),
@@ -529,6 +536,7 @@ ensoleillement_content = html.Div(
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
                                     ),
+                                    
                                 )
                             ]
                         ),
