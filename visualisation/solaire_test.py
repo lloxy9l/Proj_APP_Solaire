@@ -76,14 +76,16 @@ def update_map(selected_index):
     # Filtrer les données pour la date sélectionnée
     filtered_data = df[df["date_collecte"].dt.strftime("%Y-%m-%d") == selected_date]
 
+    value="ensoleillement" #a changer avec le callback 
+    
     # Créer la carte avec scatter_mapbox
     fig = px.scatter_mapbox(
         filtered_data,
         lat="latitude",
         lon="longitude",
-        color="ensoleillement",  # Coloration par température a changer avec le callback
+        color=value,  # Coloration par température a changer avec le callback
         color_continuous_scale="Plasma",  # Échelle de couleur
-        hover_data=["temperature", "ensoleillement"],  # Données affichées au survol
+        hover_data=[value],  # Données affichées au survol
         center=dict(lat=46.2047, lon=6.14231),
         mapbox_style="carto-positron",
         size=[1 for _ in range(len(filtered_data))] 
