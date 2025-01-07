@@ -39,6 +39,7 @@ def fetch_data():
     df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
     df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
     df["production"] = pd.to_numeric(df["irradiance"]*365*3, errors='coerce')
+
     df_conso = pd.DataFrame(data_conso)
     df_conso["consommation"] = pd.to_numeric(df_conso["consommation"], errors='coerce')
 
@@ -261,7 +262,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Température", className="card-title"),
-                                html.P(f"{global_means['temperature']:.2f}°C/day", className="card-text"),
+                                html.P(f"{global_means['temperature']:.2f}°C/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -272,7 +273,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Précipitations", className="card-title"),
-                                html.P(f"{global_means['precipitation']:.2f} mm/day", className="card-text"),
+                                html.P(f"{global_means['precipitation']:.2f} mm/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -283,7 +284,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Ensoleillement", className="card-title"),
-                                html.P(f"{global_means['ensoleillement']:.2f} heures/day", className="card-text"),
+                                html.P(f"{global_means['ensoleillement']:.2f} heures/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -294,7 +295,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Irradiance", className="card-title"),
-                                html.P(f"{global_means['irradiance']:.2f} W/m²/day", className="card-text"),
+                                html.P(f"{global_means['irradiance']:.2f} W/m²/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -305,7 +306,7 @@ main_content = html.Div(
                         dbc.CardBody(
                             [
                                 html.H4("Consommation éléctrique moyenne", className="card-title"),
-                                html.P(f"{global_means['consommation']:.2f} GWh/year", className="card-text"),
+                                html.P(f"{global_means['consommation']:.2f} GWh/année", className="card-text"),
                             ]
                         ),
                     ],
