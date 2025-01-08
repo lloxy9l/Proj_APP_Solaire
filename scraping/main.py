@@ -5,7 +5,7 @@ from generate_random_address import *
 from config_bdd import host, user, password, database
 
 nb_points = 50
-listes_points = find_addresses_within_radius("Genève",4, nb_points)
+listes_points = find_addresses_within_radius("Genève",10, nb_points)
 insert_point_into_bdd(listes_points)
 addresses_within_radius = listes_points[1]
 i = 1
