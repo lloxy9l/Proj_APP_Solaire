@@ -590,13 +590,15 @@ ensoleillement_content = html.Div(
             ],
         ),
         
-        # Deuxième ligne - 3 colonnes
+        # Deuxième ligne - 2 colonnes
         html.Div(
             style={
                 "display": "grid",
                 "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
                 "gap": "20px",  # Espacement entre les cartes
                 "margin-top":"20px",
+                "margin-bottom": "20px",
+                "height":"50vh"
             },
             children=[
                 # Deuxième carte
@@ -607,7 +609,8 @@ ensoleillement_content = html.Div(
                                 dcc.Graph(
                                     id="graph-2",
                                     figure=fig_ens,
-                                )
+                                    style={"width": "100%", "height": "100%"},
+                                ),
                             ]
                         ),
                     ]
@@ -628,7 +631,8 @@ ensoleillement_content = html.Div(
                                         labels={"ensoleillement": "Heures d'ensoleillement", "mois": "Mois"},
                                         color="ensoleillement",  # Utilisation d'une échelle de couleur pour l'ensoleillement
                                         color_continuous_scale="Plasma",
-                                    )
+                                    ),
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -786,6 +790,7 @@ temperature_content = html.Div(
                 "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
                 "gap": "20px",  # Espacement entre les cartes
                 "margin-top":"20px",
+                "height":"50vh"
             },
             children=[
                 # Deuxième carte
@@ -797,6 +802,7 @@ temperature_content = html.Div(
                                     id="graph-2",
                                     
                                     figure=fig_temp,
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -818,7 +824,8 @@ temperature_content = html.Div(
                                         labels={"temperature": "Temperature en °C", "mois": "Mois"},
                                         color="temperature",  # Utilisation d'une échelle de couleur pour la temperature
                                         color_continuous_scale="Plasma",
-                                    )
+                                    ),
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -979,6 +986,8 @@ precipitations_content = html.Div(
                 "grid-template-columns": "repeat(2, 1fr)",  # 3 colonnes
                 "gap": "20px",  # Espacement entre les cartes
                 "margin-top": "20px",
+                "margin-bottom": "20px",
+                "height":"50vh",
             },
             children=[
                 # Deuxième carte
@@ -989,6 +998,7 @@ precipitations_content = html.Div(
                                 dcc.Graph(
                                     id="graph-2",
                                     figure=fig_prec,
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -1010,7 +1020,8 @@ precipitations_content = html.Div(
                                         labels={"Precipitation": "Precipitation en mm", "mois": "Mois"},
                                         color="precipitation",  # Utilisation d'une échelle de couleur pour la precipitation
                                         color_continuous_scale="Blues",
-                                    )
+                                    ),
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
