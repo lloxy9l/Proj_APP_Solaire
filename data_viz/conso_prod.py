@@ -62,14 +62,13 @@ def load_geojson(filepath):
 
 def extract_commune_from_adresse(adresse):
     """
-    Extrait le nom de la commune depuis la colonne 'adresse', en prenant
-    la partie après la première virgule.
+    Extrait le nom de la commune depuis la colonne 'adresse'.
     
     :param adresse: Chaîne de caractère contenant l'adresse.
     :return: Nom de la commune (partie après la première virgule).
     """
     try:
-        return adresse.split(',')[1].strip()
+        return adresse.split(',')
     except IndexError:
         return None
 
@@ -165,7 +164,11 @@ def update_map(n_intervals):
     )
 
     # Personnaliser l'apparence des polygones
-    fig.update_traces(marker_line_width=2, marker_line_color="white")
+    fig.update_traces(
+        marker_line_width=2,
+        marker_line_color="white",
+        opacity=0.5
+    )
 
     return fig
 

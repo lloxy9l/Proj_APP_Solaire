@@ -634,7 +634,6 @@ ensoleillement_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
-                                    )
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -831,7 +830,6 @@ temperature_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
-                                    )
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -1032,7 +1030,6 @@ precipitations_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
-                                    )
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )

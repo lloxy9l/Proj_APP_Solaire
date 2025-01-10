@@ -65,13 +65,15 @@ def scrapping(lat,long):
         return(daily_data)
 
     def scrapping_irradiance(lat, long):
-        # Path to geckodriver (ensure geckodriver is installed and accessible)
-        geckodriver_path = r"scraping\geckodriver.exe"
+        # Set the correct geckodriver path (from the output of `which geckodriver`)
+        geckodriver_path = "/opt/homebrew/bin/geckodriver"
+        
         firefox_service = FirefoxService(geckodriver_path)
         
         # Setting Firefox options (headless for running without opening browser window)
         firefox_options = FirefoxOptions()
         firefox_options.add_argument("--headless")
+        
         # Initialize the Firefox driver
         driver = webdriver.Firefox(service=firefox_service, options=firefox_options)
         driver.get(f"https://globalsolaratlas.info/detail?m=site&s={lat},{long}")

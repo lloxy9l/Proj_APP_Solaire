@@ -5,3 +5,5 @@ __pycache__
 .DS_Store
 .venv
 .cache.sqlite
+
+Geckodriver v0.35.0 macOS aarch64.tar.gz

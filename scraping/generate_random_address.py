@@ -11,18 +11,16 @@ db = mysql.connector.connect(
     user=user,
     password=password,
     database=database,
-    charset="utf8"  # Définir l'encodage en UTF-8
-    )
+    charset="utf8"
+)
 
 def find_addresses_within_radius(central_address, radius_km, num_points):
-    
     # Initialize Nominatim geocoder
     geolocator = Nominatim(user_agent="my_geocoder")
 
     # Geocode the central address
     central_location = geolocator.geocode(central_address)
-   
-    
+
     if central_location:
         central_point = (central_location.latitude, central_location.longitude)
         addresses_within_radius = []
@@ -52,6 +50,7 @@ def find_addresses_within_radius(central_address, radius_km, num_points):
         return None
 
 def insert_point_into_bdd(data):
+    print(data)
     central_address = data[0][0]
     longitude_zone = data[0][1]
     latitude_zone = data[0][2]
@@ -68,14 +67,11 @@ def insert_point_into_bdd(data):
 
         # Fetch idzone for the Zone entry
         c.execute("SELECT idzone FROM 2026_solarx_Zone WHERE nom LIKE %s", (central_address,))
-        idzone_result = c.fetchall()
+        idzone_result = c.fetchone()  # Use fetchone to get a single result
         if idzone_result:
-            idzone = idzone_result[0]
+            idzone = idzone_result[0]  # Extract the first element from the tuple
         else:
             raise Exception(f"Zone {central_address} not found after insertion.")
-        
-        # Close the cursor after fetching results
-        c.close()
 
     with db.cursor() as c:
         # Insert points into pointsgps and associate them with the Zone
@@ -96,18 +92,14 @@ def insert_point_into_bdd(data):
                 "SELECT idpoint FROM 2026_solarx_pointsgps  WHERE ROUND(latitude, 4) = %s and ROUND(longitude, 4)=%s",
                 (latitude,longitude),
             )
-          
-            id_point_result = c.fetchall()
+            id_point_result = c.fetchone()  # Use fetchone to get a single result
 
             if id_point_result:
-                id_point = id_point_result[0]
+                id_point = id_point_result[0]  # Extract the first element from the tuple
             else:
                 raise Exception(
                     f"Point with latitude {latitude} and longitude {longitude} not found after insertion."
                 )
-
-            id_point = id_point[0] if isinstance(id_point, tuple) else id_point
-            idzone = idzone[0] if isinstance(idzone, tuple) else idzone
 
             # Insert into appartient table
             c.execute(
