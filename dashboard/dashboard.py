@@ -339,6 +339,16 @@ vertical_header = html.Div(
                     ],
                     href="/electricite",
                 ),
+                html.A(
+                    children=[
+                        html.Img(
+                            src="assets/img/team.png",  # Icône pour Rapports
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
+                        ),
+                        html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
+                    ],
+                    href="/credit",
+                ),
             ]
         ),
         
@@ -506,29 +516,38 @@ main_content = html.Div(
             children=[
                 # Première ligne - 1 colonne
                 dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-1",
-                                    figure=px.scatter_mapbox(
-                                        mean_data,
-                                        title="Production d'electricité estimée en KWh",
-                                        lat="latitude",
-                                        lon="longitude",
-                                        color="production",  # Affichage basé sur la température moyenne
-                                        color_continuous_scale="RdYlGn",  # Palette de couleurs
-                                        hover_data=["production"],  # Infos affichées au survol
-                                        size=[1 for _ in range(len(mean_data))],
-                                        mapbox_style="carto-positron",
-                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
-                                    style={"cursor": "url('assets/img/panneau.png') 4 12 ,crosshair", "width":"100%",
-                "height":"calc(100vh - 350px)",},
-                                )
-                            ]
-                        ),
-                    ]
+                [
+                    dbc.CardBody(
+                        [
+                            dcc.Graph(
+                                id="graph-1",
+                                figure=px.scatter_mapbox(
+                                    mean_data,
+                                    title="Production d'electricité estimée en KWh",
+                                    lat="latitude",
+                                    lon="longitude",
+                                    color="production",  # Affichage basé sur la température moyenne
+                                    color_continuous_scale="RdYlGn",  # Palette de couleurs
+                                    hover_data=["production"],  # Infos affichées au survol
+                                    size=[1 for _ in range(len(mean_data))],
+                                    mapbox_style="carto-positron",
+                                    center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
+                                ).update_layout(
+                                    title={
+                                        "text": "Production d'electricité estimée en KWh",
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
+                                style={
+                                    "cursor": "url('assets/img/panneau.png') 4 12, crosshair",
+                                    "width": "100%",
+                                    "height": "calc(100vh - 350px)",
+                                },
+                            )
+                        ]
+                    ),
+                ]
                 ),
             ],
         ),
@@ -554,13 +573,19 @@ fig_ens.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(),
                               name='Avg Trend', 
                               line=dict(dash='dash', width=2)))
 fig_ens.update_layout(
-    title='Monthly Average Ensoleillement',
     xaxis_title='Month',
     yaxis_title='Ensoleillement (hours)',
     template='plotly_white',
     xaxis=dict(tickformat='%Y-%m'),
     yaxis=dict(showgrid=True, zeroline=True),
-    legend=dict(title='Legend', x=0.01, y=0.99)
+    legend=dict(title='Legend', x=0.01, y=0.99),
+    title={
+            "text": "Monthly Average Ensoleillement",
+            "font": {
+                "size": 22,
+            },
+            "x": 0.5,  # Centrer le titre horizontalement
+    }
 )
 # Contenu ensoleillement
 ensoleillement_content = html.Div(
@@ -668,7 +693,13 @@ ensoleillement_content = html.Div(
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
+                                    ).update_layout(
+                                    title={
+                                        "text": "Ensoleillement quotidien moyen en heures",
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
                                     style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
@@ -698,7 +729,7 @@ ensoleillement_content = html.Div(
                                     id="graph-2",
                                     figure=fig_ens,
                                     style={"width": "100%", "height": "100%"},
-                                ),
+                                )
                             ]
                         ),
                     ]
@@ -722,6 +753,11 @@ ensoleillement_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -752,13 +788,19 @@ fig_temp.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(),
                               name='Avg Trend', 
                               line=dict(dash='dash', width=2)))
 fig_temp.update_layout(
-    title='Monthly Average Temperature',
     xaxis_title='Month',
     yaxis_title='Temperature (°C)',
     template='plotly_white',
     xaxis=dict(tickformat='%Y-%m'),
     yaxis=dict(showgrid=True, zeroline=True),
-    legend=dict(title='Legend', x=0.01, y=0.99)
+    legend=dict(title='Legend', x=0.01, y=0.99),
+    title={
+            "text": "Monthly Average Temperature",
+            "font": {
+                "size": 22,
+            },
+            "x": 0.5,  # Centrer le titre horizontalement
+    }
 )
 # Contenu température
 temperature_content = html.Div(
@@ -864,7 +906,12 @@ temperature_content = html.Div(
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
+                                    ).update_layout(
+                                    title={
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
                                     style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
@@ -894,7 +941,7 @@ temperature_content = html.Div(
                                     
                                     figure=fig_temp,
                                     style={"width": "100%", "height": "100%"},
-                                )
+                                ),
                             ]
                         ),
                     ]
@@ -918,6 +965,10 @@ temperature_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -948,13 +999,19 @@ fig_prec.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(),
                                name='Avg Trend', 
                                line=dict(dash='dash', width=2)))
 fig_prec.update_layout(
-    title='Monthly Average Precipitation',
     xaxis_title='Month',
     yaxis_title='Precipitation (mm)',
     template='plotly_white',
     xaxis=dict(tickformat='%Y-%m'),
     yaxis=dict(showgrid=True, zeroline=True),
-    legend=dict(title='Legend', x=0.01, y=0.99)
+    legend=dict(title='Legend', x=0.01, y=0.99),
+    title={
+            "text": "Monthly Average Precipitation",
+            "font": {
+                "size": 22,
+            },
+            "x": 0.5,  # Centrer le titre horizontalement
+    }
 )
 # Contenu Précipitations
 precipitations_content = html.Div(
@@ -1063,7 +1120,12 @@ precipitations_content = html.Div(
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
+                                    ).update_layout(
+                                    title={
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
                                     style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
@@ -1093,7 +1155,7 @@ precipitations_content = html.Div(
                                     id="graph-2",
                                     figure=fig_prec,
                                     style={"width": "100%", "height": "100%"},
-                                )
+                                ),
                             ]
                         ),
                     ]
@@ -1118,6 +1180,10 @@ precipitations_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -1459,6 +1525,83 @@ profile_content = html.Div(
 )
 
 
+credit_content = html.Div(
+    style={
+        "margin-left": "80px",
+        "padding": "20px",
+        "display": "flex",
+        "justify-content": "center",
+        "align-items": "center",
+        "height": "810px",
+        "width": "917px",
+        "background-color": "#005dff",
+        "border-radius": "30px",
+        "position": "absolute",
+        "top": "50%",
+        "left": "50%",
+        "transform": "translate(-50%, -50%)",
+    },
+    children=[
+        html.Div(
+            style={
+                "background-color": "white",
+                "padding": "30px",
+                "border-radius": "10px",
+                "width": "800px",
+                "height": "705px",
+                "box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
+            },
+            children=[
+                # Titre de la page
+                html.Div(
+                    style={"text-align": "center", "margin-bottom": "20px"},
+                    children=[
+                        html.H1("Geneva Weather Data Collection", style={"color": "#005dff"}),
+                        html.P(
+                            "Projet réalisé par un groupe d'étudiants pour collecter et analyser les données météorologiques de la région de Genève.",
+                            style={"color": "#555"}
+                        )
+                    ]
+                ),
+
+                # Description du projet
+                html.Div(
+                    style={"margin-bottom": "20px"},
+                    children=[
+                        html.H2("Introduction", style={"color": "#005dff"}),
+                        html.P(
+                            "Ce projet vise à collecter des données météorologiques détaillées et fiables pour la région de Genève. Ces données sont essentielles pour des applications comme la planification urbaine, l'agriculture, et les projets d'énergie renouvelable."
+                        ),
+                        html.H2("Objectifs", style={"color": "#005dff"}),
+                        html.Ul([
+                            html.Li("Collecter des données sur la luminosité, la radiance, la température et les précipitations."),
+                            html.Li("Fournir des informations exploitables pour les parties prenantes locales."),
+                            html.Li("Créer une base de données robuste pour le stockage sécurisé des données.")
+                        ])
+                    ]
+                ),
+
+                # Liste des membres de l'équipe
+                html.Div(
+                    style={"margin-bottom": "20px"},
+                    children=[
+                        html.H2("Équipe", style={"color": "#005dff"}),
+                        html.Ul([
+                            html.Li("Maxens Soldan"),
+                            html.Li("Baptiste Renand"),
+                            html.Li("Arno Wilhelm"),
+                            html.Li("Degouey Corentin"),
+                            html.Li("Hassnaoui Walid"),
+                            html.Li("Bercier Thomas"),
+                            html.Li("Francielle Andrade Cardoso")
+                        ]),
+                        html.P("Coryright 2025")
+                    ]
+                ),
+            ]
+        )
+    ]
+)
 
 
 # Disposition principale
@@ -1497,6 +1640,8 @@ def display_content(pathname):
         return electricite_content
     elif pathname == "/profile_content":
         return profile_content
+    elif pathname =="/credit":
+        return credit_content
     else:
         return html.H1("Page non trouvée")
 
@@ -1571,6 +1716,13 @@ def update_menu_text_display(sidebar_width):
                 ],
                 href="/electricite",
             ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                ],
+                href="/credit",
+            ),
         ]
     else:
         # Si la largeur est agrandie, on montre les spans
@@ -1610,6 +1762,14 @@ def update_menu_text_display(sidebar_width):
                 ],
                 href="electricite",
             ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
+                ],
+                href="credit",
+            ),
+            
         ]
 
 # Callback pour mettre à jour la carte et gérer les clics sur les zones
