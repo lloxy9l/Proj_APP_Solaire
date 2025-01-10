@@ -589,13 +589,15 @@ ensoleillement_content = html.Div(
             ],
         ),
         
-        # Deuxième ligne - 3 colonnes
+        # Deuxième ligne - 2 colonnes
         html.Div(
             style={
                 "display": "grid",
                 "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
                 "gap": "20px",  # Espacement entre les cartes
                 "margin-top":"20px",
+                "margin-bottom": "20px",
+                "height":"50vh"
             },
             children=[
                 # Deuxième carte
@@ -606,7 +608,8 @@ ensoleillement_content = html.Div(
                                 dcc.Graph(
                                     id="graph-2",
                                     figure=fig_ens,
-                                )
+                                    style={"width": "100%", "height": "100%"},
+                                ),
                             ]
                         ),
                     ]
@@ -631,6 +634,8 @@ ensoleillement_content = html.Div(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
                                     )
+                                    ),
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -788,6 +793,7 @@ temperature_content = html.Div(
                 "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
                 "gap": "20px",  # Espacement entre les cartes
                 "margin-top":"20px",
+                "height":"50vh"
             },
             children=[
                 # Deuxième carte
@@ -799,6 +805,7 @@ temperature_content = html.Div(
                                     id="graph-2",
                                     
                                     figure=fig_temp,
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -824,6 +831,8 @@ temperature_content = html.Div(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
                                     )
+                                    ),
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -984,6 +993,8 @@ precipitations_content = html.Div(
                 "grid-template-columns": "repeat(2, 1fr)",  # 3 colonnes
                 "gap": "20px",  # Espacement entre les cartes
                 "margin-top": "20px",
+                "margin-bottom": "20px",
+                "height":"50vh",
             },
             children=[
                 # Deuxième carte
@@ -994,6 +1005,7 @@ precipitations_content = html.Div(
                                 dcc.Graph(
                                     id="graph-2",
                                     figure=fig_prec,
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
@@ -1020,6 +1032,8 @@ precipitations_content = html.Div(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
                                     )
+                                    ),
+                                    style={"width": "100%", "height": "100%"},
                                 )
                             ]
                         ),
