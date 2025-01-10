@@ -364,7 +364,7 @@ main_content = html.Div(
         html.Div(
             style={
                 "width":"100%",
-                "height":"100vh",
+                "height":"calc(100vh-350px)",
             },
             children=[
                 # Première ligne - 1 colonne
@@ -500,7 +500,7 @@ ensoleillement_content = html.Div(
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
                                     ),
-                                    
+                                    style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
                         ),
@@ -513,8 +513,9 @@ ensoleillement_content = html.Div(
         html.Div(
             style={
                 "display": "grid",
-                "grid-template-columns": "repeat(3, 1fr)",  # 3 colonnes
+                "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
                 "gap": "20px",  # Espacement entre les cartes
+                "margin-top":"20px",
             },
             children=[
                 # Deuxième carte
@@ -557,31 +558,6 @@ ensoleillement_content = html.Div(
                                             }
                                         ],
                                         "layout": {"title": "Précipitations"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Quatrième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-4",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [3, 4, 5, 6],
-                                                "type": "scatter",
-                                                "mode": "markers",
-                                                "name": "Points",
-                                            }
-                                        ],
-                                        "layout": {"title": "Données diverses"},
                                     },
                                 )
                             ]
@@ -694,6 +670,7 @@ temperature_content = html.Div(
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
                                     ),
+                                    style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
                         ),
@@ -706,8 +683,9 @@ temperature_content = html.Div(
         html.Div(
             style={
                 "display": "grid",
-                "grid-template-columns": "repeat(3, 1fr)",  # 3 colonnes
+                "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
                 "gap": "20px",  # Espacement entre les cartes
+                "margin-top":"20px",
             },
             children=[
                 # Deuxième carte
@@ -750,31 +728,6 @@ temperature_content = html.Div(
                                             }
                                         ],
                                         "layout": {"title": "Précipitations"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Quatrième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-4",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [3, 4, 5, 6],
-                                                "type": "scatter",
-                                                "mode": "markers",
-                                                "name": "Points",
-                                            }
-                                        ],
-                                        "layout": {"title": "Données diverses"},
                                     },
                                 )
                             ]
@@ -891,6 +844,7 @@ precipitations_content = html.Div(
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
                                     ),
+                                    style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
                         ),
@@ -903,8 +857,9 @@ precipitations_content = html.Div(
         html.Div(
             style={
                 "display": "grid",
-                "grid-template-columns": "repeat(3, 1fr)",  # 3 colonnes
+                "grid-template-columns": "repeat(2, 1fr)",  # 3 colonnes
                 "gap": "20px",  # Espacement entre les cartes
+                "margin-top": "20px",
             },
             children=[
                 # Deuxième carte
@@ -947,31 +902,6 @@ precipitations_content = html.Div(
                                             }
                                         ],
                                         "layout": {"title": "Précipitations"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Quatrième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-4",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [3, 4, 5, 6],
-                                                "type": "scatter",
-                                                "mode": "markers",
-                                                "name": "Points",
-                                            }
-                                        ],
-                                        "layout": {"title": "Données diverses"},
                                     },
                                 )
                             ]
