@@ -1,24 +1,55 @@
-# search.py (salve esse código em um arquivo chamado search.py)
-
-import pandas as pd
+import mysql.connector
 
 class Search:
-    def __init__(self, data):
-        """Inicializa a classe com os dados."""
-        self.data = data
+    def __init__(self, host, user, password, database):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
 
-    def search_data(self, query):
-        """Filtra os dados com base na consulta e retorna os resultados."""
-        if query is None or query == "":
-            return "Aucune donnée à afficher"  # Se a pesquisa estiver vazia
-        
-        filtered_df = self.data[self.data['nom'].str.contains(query, case=False, na=False)]
-        
-        if filtered_df.empty:
-            return "Aucun résultat trouvé"  # Nenhum resultado encontrado
+    def get_db_connection(self):
+        """Conectar ao banco de dados MySQL."""
+        return mysql.connector.connect(
+            host=self.host,
+            user=self.user,
+            password=self.password,
+            database=self.database
+        )
 
-        # Retorna os resultados formatados
-        return [
-            f"Nom: {row['nom']}, Température: {row['temperature']}°C, Précipitations: {row['precipitation']}mm"
-            for _, row in filtered_df.iterrows()
-        ]
+    def search_in_all_tables(self, query):
+        """Pesquisar nas tabelas do banco de dados."""
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+
+        # Pegando todas as tabelas do banco de dados
+        cursor.execute("SHOW TABLES")
+        tables = cursor.fetchall()
+        
+        all_results = []
+
+        # Iterando sobre todas as tabelas
+        for (table,) in tables:
+            # Gerando a consulta dinâmica para procurar o texto em todas as colunas
+            search_query = f"SELECT * FROM {table} WHERE "
+            cursor.execute(f"DESCRIBE {table}")
+            columns = cursor.fetchall()
+            
+            # Criando condição para cada coluna da tabela (assumindo que sejam colunas de texto)
+            conditions = []
+            for (column, _, data_type, _, _, _) in columns:
+                if 'char' in data_type or 'text' in data_type:
+                    conditions.append(f"{column} LIKE %s")
+            
+            # Se houver alguma coluna do tipo texto, prosseguir com a pesquisa
+            if conditions:
+                query_str = search_query + " OR ".join(conditions)
+                search_params = ['%' + query + '%'] * len(conditions)
+                cursor.execute(query_str, search_params)
+                results = cursor.fetchall()
+                all_results.extend(results)
+        
+        # Fechando a conexão com o banco
+        cursor.close()
+        conn.close()
+
+        return all_results
