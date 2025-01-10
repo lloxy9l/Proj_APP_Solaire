@@ -770,9 +770,9 @@ temperature_content = html.Div(
                                         mean_data,
                                         lat="latitude",
                                         lon="longitude",
-                                        color="ensoleillement",  # Affichage basé sur la température moyenne
+                                        color="temperature",  # Affichage basé sur la température moyenne
                                         color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["ensoleillement"],  # Infos affichées au survol
+                                        hover_data=["temperature"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
@@ -1518,6 +1518,7 @@ def update_map(clickData):
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
         zoom=10,
+        range_color=[0,7000],
         center={"lat": 46.2044, "lon": 6.1432}  # Centré sur Genève
     )
 
