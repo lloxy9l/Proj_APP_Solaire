@@ -3,11 +3,18 @@ import dash
 from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime
 from config_bdd import host, user, password, database
 import mysql.connector
 import pandas as pd
 
+
+##########################################################################################################################################
+##########################################################################################################################################
+######################              Recuperation données bdd pour carte meteo                            #################################
+##########################################################################################################################################
+##########################################################################################################################################
 # Fonction pour récupérer les données
 def fetch_data():
     conn = mysql.connector.connect(
@@ -47,7 +54,11 @@ def fetch_data():
     
     return df,df_conso
 
-
+##########################################################################################################################################
+##########################################################################################################################################
+######################              Conversion des données en DF pour les utiliser                       #################################
+##########################################################################################################################################
+##########################################################################################################################################
 # Charger les données
 data = fetch_data()
 data_meteo=data[0]
@@ -55,11 +66,8 @@ df = pd.DataFrame(data_meteo)
 data_conso = data[1]
 df_conso = pd.DataFrame(data_conso)
 
-
 # Calculer la moyenne des valeurs pour chaque point GPS
 mean_data = df.groupby(["latitude", "longitude"]).mean().reset_index()
-
-
 global_means = {
     "temperature": df["temperature"].mean(),
     "ensoleillement": df["ensoleillement"].mean()/3600,
@@ -68,8 +76,31 @@ global_means = {
     "consommation":df_conso["consommation"].mean()/1000,
 }
 
+
+datalinechart=df
+# Extract year and month for grouping
+datalinechart['year_month'] = datalinechart['date_collecte'].dt.to_period('M')
+
+# Calculate monthly averages
+monthly_datalinechart = datalinechart.groupby('year_month').mean()
+
+# Extraire le mois et l'année
+df["mois"] = df["date_collecte"].dt.month  # Extraire uniquement le mois (1-12)
+
+# Grouper par mois et calculer la moyenne globale de chaque paramètre (ensoleillement, température, précipitation)
+df_mois = df.groupby("mois")[["ensoleillement", "temperature", "precipitation"]].agg({
+    "ensoleillement": "mean",  # Moyenne de l'ensoleillement
+    "temperature": "mean",    # Moyenne de la température
+    "precipitation": "mean"   # Moyenne des précipitations
+}).reset_index()
+
 print('Data Fetched')
 
+##########################################################################################################################################
+##########################################################################################################################################
+######################              Récuperation données bdd pour conso elec carte                       #################################
+##########################################################################################################################################
+##########################################################################################################################################
 def get_data():
     conn = mysql.connector.connect(
         host=host,
@@ -114,6 +145,9 @@ geojson_data = load_geojson('geo_data_boundaries.geojson')
 df = get_data()
 communes_geo_data = get_communes_data(df, geojson_data)
 print("Data communed fetched")
+
+
+
 # Initialisation de l'application Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -135,7 +169,11 @@ vertical_header_style = {
     "z-index":"100"
 }
 
-# Contenu du header vertical
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur vertical                                              #################################
+##########################################################################################################################################
+##########################################################################################################################################
 vertical_header = html.Div(
     id="vertical-header",  # ID pour appliquer le style CSS au hover
     style=vertical_header_style,
@@ -225,7 +263,12 @@ vertical_header = html.Div(
         ),
     ],
 )
-# Contenu principal
+
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur main_content                                          #################################
+##########################################################################################################################################
+##########################################################################################################################################
 main_content = html.Div(
     style={
         "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
@@ -400,6 +443,33 @@ main_content = html.Div(
     ],
 )
 
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur ensoleillement                                        #################################
+##########################################################################################################################################
+##########################################################################################################################################
+# Ensoleillement line chart graphe
+fig_ens = go.Figure()
+fig_ens.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
+                              y=monthly_datalinechart['ensoleillement'], 
+                              mode='lines+markers', 
+                              name='Ensoleillement',
+                              marker=dict(size=8),
+                              line=dict(width=2)))
+fig_ens.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
+                              y=[monthly_datalinechart['ensoleillement'].mean()] * len(monthly_datalinechart), 
+                              mode='lines', 
+                              name='Average Trend', 
+                              line=dict(dash='dash', color='gray', width=2)))
+fig_ens.update_layout(
+    title='Monthly Average Ensoleillement',
+    xaxis_title='Month',
+    yaxis_title='Ensoleillement (hours)',
+    template='plotly_white',
+    xaxis=dict(tickformat='%Y-%m'),
+    yaxis=dict(showgrid=True, zeroline=True),
+    legend=dict(title='Legend', x=0.01, y=0.99)
+)
 # Contenu ensoleillement
 ensoleillement_content = html.Div(
     style={
@@ -532,16 +602,7 @@ ensoleillement_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-2",
-                                    figure={ 
-                                        "data": [
-                                            {
-                                                "values": [50, 30, 20],
-                                                "labels": ["Soleil", "Nuages", "Pluie"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Météo"},
-                                    },
+                                    figure=fig_ens,
                                 )
                             ]
                         ),
@@ -555,17 +616,15 @@ ensoleillement_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-3",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
-                                                "y": [12, 19, 3, 5, 2],
-                                                "type": "bar",
-                                                "name": "Précipitations",
-                                            }
-                                        ],
-                                        "layout": {"title": "Précipitations"},
-                                    },
+                                    figure = px.bar(
+                                        df_mois,
+                                        x="mois",
+                                        y="ensoleillement",
+                                        title="Distribution des heures d'ensoleillement par mois",
+                                        labels={"ensoleillement": "Heures d'ensoleillement", "mois": "Mois"},
+                                        color="ensoleillement",  # Utilisation d'une échelle de couleur pour l'ensoleillement
+                                        color_continuous_scale="Plasma",
+                                    )
                                 )
                             ]
                         ),
@@ -575,7 +634,33 @@ ensoleillement_content = html.Div(
         ),
     ],
 )
-
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur temperature                                           #################################
+##########################################################################################################################################
+##########################################################################################################################################
+#graphe line chart temperature
+fig_temp = go.Figure()
+fig_temp.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
+                              y=monthly_datalinechart['temperature'], 
+                              mode='lines+markers', 
+                              name='Temperature',
+                              marker=dict(size=8),
+                              line=dict(width=2)))
+fig_temp.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
+                              y=[monthly_datalinechart['temperature'].mean()] * len(monthly_datalinechart), 
+                              mode='lines', 
+                              name='Average Trend', 
+                              line=dict(dash='dash', color='gray', width=2)))
+fig_temp.update_layout(
+    title='Monthly Average Temperature',
+    xaxis_title='Month',
+    yaxis_title='Temperature (°C)',
+    template='plotly_white',
+    xaxis=dict(tickformat='%Y-%m'),
+    yaxis=dict(showgrid=True, zeroline=True),
+    legend=dict(title='Legend', x=0.01, y=0.99)
+)
 # Contenu température
 temperature_content = html.Div(
     style={
@@ -706,16 +791,8 @@ temperature_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-2",
-                                    figure={ 
-                                        "data": [
-                                            {
-                                                "values": [50, 30, 20],
-                                                "labels": ["Soleil", "Nuages", "Pluie"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Météo"},
-                                    },
+                                    
+                                    figure=fig_temp,
                                 )
                             ]
                         ),
@@ -729,17 +806,15 @@ temperature_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-3",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
-                                                "y": [12, 19, 3, 5, 2],
-                                                "type": "bar",
-                                                "name": "Précipitations",
-                                            }
-                                        ],
-                                        "layout": {"title": "Précipitations"},
-                                    },
+                                    figure = px.bar(
+                                        df_mois,
+                                        x="mois",
+                                        y="temperature",
+                                        title="Distribution des temperature par mois",
+                                        labels={"temperature": "Temperature en °C", "mois": "Mois"},
+                                        color="temperature",  # Utilisation d'une échelle de couleur pour la temperature
+                                        color_continuous_scale="Plasma",
+                                    )
                                 )
                             ]
                         ),
@@ -750,7 +825,32 @@ temperature_content = html.Div(
     ],
 )
 
-
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur precipitation                                         #################################
+##########################################################################################################################################
+##########################################################################################################################################
+fig_prec = go.Figure()
+fig_prec.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
+                               y=monthly_datalinechart['precipitation'], 
+                               mode='lines+markers', 
+                               name='Precipitation',
+                               marker=dict(size=8),
+                               line=dict(width=2)))
+fig_prec.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
+                               y=[monthly_datalinechart['precipitation'].mean()] * len(monthly_datalinechart), 
+                               mode='lines', 
+                               name='Average Trend', 
+                               line=dict(dash='dash', color='gray', width=2)))
+fig_prec.update_layout(
+    title='Monthly Average Precipitation',
+    xaxis_title='Month',
+    yaxis_title='Precipitation (mm)',
+    template='plotly_white',
+    xaxis=dict(tickformat='%Y-%m'),
+    yaxis=dict(showgrid=True, zeroline=True),
+    legend=dict(title='Legend', x=0.01, y=0.99)
+)
 # Contenu Précipitations
 precipitations_content = html.Div(
     style={
@@ -884,16 +984,7 @@ precipitations_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-2",
-                                    figure={ 
-                                        "data": [
-                                            {
-                                                "values": [50, 30, 20],
-                                                "labels": ["Soleil", "Nuages", "Pluie"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Météo"},
-                                    },
+                                    figure=fig_prec,
                                 )
                             ]
                         ),
@@ -907,17 +998,15 @@ precipitations_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-3",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
-                                                "y": [12, 19, 3, 5, 2],
-                                                "type": "bar",
-                                                "name": "Précipitations",
-                                            }
-                                        ],
-                                        "layout": {"title": "Précipitations"},
-                                    },
+                                    figure = px.bar(
+                                        df_mois,
+                                        x="mois",
+                                        y="precipitation",
+                                        title="Distribution des precipitation par mois",
+                                        labels={"Precipitation": "Precipitation en mm", "mois": "Mois"},
+                                        color="precipitation",  # Utilisation d'une échelle de couleur pour la precipitation
+                                        color_continuous_scale="Blues",
+                                    )
                                 )
                             ]
                         ),
@@ -929,8 +1018,11 @@ precipitations_content = html.Div(
 )
 
 
-
-# Contenu Electricité
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur electricité                                           #################################
+##########################################################################################################################################
+##########################################################################################################################################
 electricite_content = html.Div(
     style={
         "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
@@ -1058,12 +1150,12 @@ electricite_content = html.Div(
                                     figure={ 
                                         "data": [
                                             {
-                                                "values": [50, 30, 20],
-                                                "labels": ["Soleil", "Nuages", "Pluie"],
+                                                "values": [77, 11, 12],
+                                                "labels": ["Hydraulique", "Solaire", "Incinération des déchets"],
                                                 "type": "pie",
                                             }
                                         ],
-                                        "layout": {"title": "Météo"},
+                                        "layout": {"title": "Production électricité du canton de Genève"},
                                     },
                                 )
                             ]
@@ -1099,7 +1191,11 @@ electricite_content = html.Div(
     ],
 )
 
-
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur profile                                               #################################
+##########################################################################################################################################
+##########################################################################################################################################
 #Profile content
 profile_content = html.Div(
     style={
@@ -1273,6 +1369,11 @@ app.layout = html.Div(
     ],
 )
 
+##########################################################################################################################################
+##########################################################################################################################################
+######################                        Callback                                                   #################################
+##########################################################################################################################################
+##########################################################################################################################################
 # Callback pour changer le contenu principal en fonction de l'URL
 @app.callback(
     Output('main-content', 'children'),
