@@ -628,6 +628,9 @@ ensoleillement_content = html.Div(
                                         labels={"ensoleillement": "Heures d'ensoleillement", "mois": "Mois"},
                                         color="ensoleillement",  # Utilisation d'une échelle de couleur pour l'ensoleillement
                                         color_continuous_scale="Plasma",
+                                    ).update_layout(
+                                        plot_bgcolor='white',  # Fond du graphique en blanc
+                                        paper_bgcolor='white',  # Fond extérieur en blanc
                                     )
                                 )
                             ]
@@ -818,6 +821,9 @@ temperature_content = html.Div(
                                         labels={"temperature": "Temperature en °C", "mois": "Mois"},
                                         color="temperature",  # Utilisation d'une échelle de couleur pour la temperature
                                         color_continuous_scale="Plasma",
+                                    ).update_layout(
+                                        plot_bgcolor='white',  # Fond du graphique en blanc
+                                        paper_bgcolor='white',  # Fond extérieur en blanc
                                     )
                                 )
                             ]
@@ -1010,6 +1016,10 @@ precipitations_content = html.Div(
                                         labels={"Precipitation": "Precipitation en mm", "mois": "Mois"},
                                         color="precipitation",  # Utilisation d'une échelle de couleur pour la precipitation
                                         color_continuous_scale="Blues",
+                                        
+                                    ).update_layout(
+                                        plot_bgcolor='white',  # Fond du graphique en blanc
+                                        paper_bgcolor='white',  # Fond extérieur en blanc
                                     )
                                 )
                             ]
