@@ -992,27 +992,52 @@ electricite_content = html.Div(
         html.Div(
             style={
                 "display": "grid",
-                "grid-template-columns": "repeat(3, 1fr)",  # Grille 3x3
+                "grid-template-columns": "1fr",  # 1 seule colonne sur la première ligne
                 "gap": "20px",  # Espace entre les cartes
             },
-            children=[
+            children = [
                 dbc.Card(
                     [
                         dbc.CardBody(
                             [
-                                dcc.Graph(id='map-graph'),
-                                html.Div(id='click-data', style={'padding': '5px', 'font-size': '20px'})
+                                dcc.Graph(
+                                    id='map-graph',
+                                    style={
+                                        'height': 'calc(100vh - 350px)',
+                                        'width': '100%'
+                                    }
+                                ),
+                                html.Div(
+                                    id='click-data',
+                                    style={
+                                        'padding': '5px',
+                                        'font-size': '20px'
+                                    }
+                                )
                             ]
                         ),
                     ]
                 ),
+            ]
+
+        ),
+        # Deuxième ligne - 3 colonnes
+        html.Div(
+            style={
+                "display": "grid",
+                "grid-template-columns": "repeat(2, 1fr)",  # 3 colonnes
+                "gap": "20px",  # Espacement entre les cartes
+                "margin-top": "20px",
+            },
+            children=[
+                # Deuxième carte
                 dbc.Card(
                     [
                         dbc.CardBody(
                             [
                                 dcc.Graph(
                                     id="graph-2",
-                                    figure={
+                                    figure={ 
                                         "data": [
                                             {
                                                 "values": [50, 30, 20],
@@ -1027,6 +1052,8 @@ electricite_content = html.Div(
                         ),
                     ]
                 ),
+                
+                # Troisième carte
                 dbc.Card(
                     [
                         dbc.CardBody(
@@ -1039,143 +1066,10 @@ electricite_content = html.Div(
                                                 "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
                                                 "y": [12, 19, 3, 5, 2],
                                                 "type": "bar",
-                                                "name": "Précipitations",
+                                                "name": "Electricité",
                                             }
                                         ],
-                                        "layout": {"title": "Précipitations"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-4",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [3, 4, 5, 6],
-                                                "type": "scatter",
-                                                "mode": "markers",
-                                                "name": "Points",
-                                            }
-                                        ],
-                                        "layout": {"title": "Données diverses"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-5",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [9, 14, 11, 18],
-                                                "type": "line",
-                                                "name": "Graphique 5",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 5"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-6",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "values": [60, 25, 15],
-                                                "labels": ["Soleil", "Nuages", "Pluie"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 6"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-7",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [14, 11, 16, 20],
-                                                "type": "bar",
-                                                "name": "Graphique 7",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 7"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-8",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [5, 8, 7, 10],
-                                                "type": "scatter",
-                                                "mode": "markers",
-                                                "name": "Graphique 8",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 8"},
-                                    },
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-9",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [13, 15, 9, 18],
-                                                "type": "line",
-                                                "name": "Graphique 9",
-                                            }
-                                        ],
-                                        "layout": {"title": "Graphique 9"},
+                                        "layout": {"title": "Electricité"},
                                     },
                                 )
                             ]
