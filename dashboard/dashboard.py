@@ -2,55 +2,23 @@ import dash
 from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
 import mysql.connector
+from search import Search
+import logging
+
+# Configuração do logging
+logging.basicConfig(level=logging.DEBUG)
 
 
+
+
+
+# Instanciando a classe Search para interagir com o banco de dados
+search_instance = Search(host="projet-idu.hqbr.win", user="dev", password="9e*s@@iCFNs#r8", database="projet_solarx")
 
 # Initialisation de l'application Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host="projet-idu.hqbr.win",
-        user="dev",
-        password="9e*s@@iCFNs#r8",
-        database="projet_solarx"
-    )
 
-# Layout do aplicativo Dash
-app.layout = html.Div([
-    # Componente de busca
-    dcc.Input(id='search-bar', type='text', placeholder='Digite para pesquisar...'),
-    # Div para mostrar os resultados
-    html.Div(id='results-container')
-])
-
-@app.callback(
-    Output('results-container', 'children'),
-    [Input('search-bar', 'value')]  # Usar o id correto aqui
-)
-def update_results(query):
-    if query is None or query == '':
-        return "Digite algo para pesquisar."
-
-    # Conectando ao banco de dados
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # Consulta ao banco de dados (ajuste conforme a estrutura do seu banco)
-    query_sql = "SELECT * FROM sua_tabela WHERE nome LIKE %s"
-    cursor.execute(query_sql, ('%' + query + '%',))
-
-    results = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    # Se não encontrar resultados
-    if not results:
-        return "Nenhum resultado encontrado."
-
-    # Exibindo os resultados de forma simples
-    return html.Ul([html.Li(f"{row}") for row in results])
 
 # Style général pour la barre latérale
 vertical_header_style = {
@@ -194,11 +162,15 @@ main_content = html.Div(
                             },
                             children=[
                                 html.Img(
+                                    id="search-icon", 
                                     src="assets/img/search-icon.png",
                                     style={"width": "30px", "height": "30px"},
                                 ),
                             ],
                         ),
+                        
+                        
+
                         dcc.Input(
                             id="search-input",
                             type="text",
@@ -213,22 +185,46 @@ main_content = html.Div(
                                 "outline": "none",
                             },
                         ),
+
+                       
                     ],
                 ),
                     
                 # Photo de profil
-                html.Img(
-                    src="assets/img/profile.png",
-                    style={
+                html.A(
+                    children=[
+                    html.Img(src="assets/img/profile.png", alt="Profile Image")],
+                    href="/profile", 
+                        style={
                         "width": "65px",
                         "height": "65px",
                         "border-radius": "50%",
                         "border": "2px solid #fff",
+                        "margin-right": "20px",
+                        "margin-bottom": "15px",
                     },
+                    id="profile-link", 
                 ),
+               # html.Div(id='page-content')  # Onde o conteúdo da página será exibido
             ],
         ),
 
+          # Modal para exibir os resultados da pesquisa
+                dbc.Modal(
+                id="search-results-modal",
+                is_open=False,  # Inicialmente fechado
+                children=[
+                    dbc.ModalHeader("Resultados da Pesquisa"),
+                    dbc.ModalBody(
+                        html.Div(
+                            id="search-results-list",  # Lista para exibir os resultados
+                            children=[],  # Inicialmente vazio
+                        )
+                    ),
+                ],
+            ),
+
+       
         # Section des cartes pour les informations chiffrées
         html.Div(
             style={
@@ -286,11 +282,12 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Puissance éléctrique moyenne", className="card-title"),
+                                html.H4("Puissance éléctrique moyenne", className="card-title", style={"font-size": "17px"} ),
                                 html.P("25 kW", className="card-text"),
                             ]
                         ),
                     ],
+                    style={"width": "18rem","height": "6rem" },
                 ),
             ],
         ),
@@ -405,6 +402,12 @@ app.layout = html.Div(
         dcc.Store(id="sidebar-width", data="80px"),  # Stocker la largeur actuelle de la barre latérale
         vertical_header,
         main_content,
+        dcc.Location(id='url', refresh=False),  
+        html.A(
+            children=html.Img(src="assets/img/profile.png", style={"width": "40px"}),
+            href="/profile",  
+        ),
+        html.Div(id='page-content')  
     ],
 )
 
@@ -520,7 +523,50 @@ def update_menu_text_display(sidebar_width):
             ),
         ]
 
- 
+
+ # Callback para realizar a pesquisa e exibir os resultados ao pressionar Enter
+@app.callback(
+    [Output("search-results-modal", "is_open"),  # Controla a abertura/fechamento do modal
+     Output("search-results-list", "children")],  # Exibe os resultados na lista do modal
+    Input("search-input", "value")  # O callback será acionado quando o valor do input mudar
+)
+def update_search_results(search_term):
+    # Teste para verificar o valor digitado
+    logging.debug(f"Valor digitado: {search_term}")
+
+    # Verifica se o campo de pesquisa está vazio
+    if not search_term:
+        logging.debug("Campo vazio. Fechando o modal.")
+        return False, []  # Fecha o modal e não exibe resultados
+
+    # Realizando a busca no banco de dados
+    try:
+        logging.debug("Iniciando a busca no banco de dados...")
+        results = search_instance.search_in_all_tables(search_term)
+        logging.debug(f"Resultados encontrados: {results}")
+
+    except Exception as e:
+        logging.error(f"Erro durante a busca: {str(e)}")
+        return [{"error": str(e)}]
+
+    # Formatando os resultados para exibição no pop-up
+    if results:
+        results_list = [html.Div(f"Resultado {i+1}: {result[0]}") for i, result in enumerate(results)]
+        return True, results_list  # Abre o modal e exibe os resultados
+    else:
+        logging.debug("Nenhum resultado encontrado.")
+        return True, [html.Div("Nenhum resultado encontrado")]  # Exibe a mensagem de nenhum resultado encontrado
+    
+
+@app.callback(
+    Output('page-content', 'children'),
+    Input('url', 'pathname')  # Observa o pathname da URL
+)
+def display_page(pathname):
+    if pathname == '/profile':
+        return None
+    else: 
+        return None
 
 # Exécution de l'application
 if __name__ == "__main__":

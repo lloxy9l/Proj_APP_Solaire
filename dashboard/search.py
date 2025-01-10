@@ -1,4 +1,5 @@
 import mysql.connector
+from config_bdd import host, user, password, database
 
 class Search:
     def __init__(self, host, user, password, database):
@@ -17,7 +18,6 @@ class Search:
         )
 
     def search_in_all_tables(self, query):
-        """Pesquisar nas tabelas do banco de dados."""
         conn = self.get_db_connection()
         cursor = conn.cursor()
 
