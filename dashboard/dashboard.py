@@ -376,6 +376,7 @@ main_content = html.Div(
                                     id="graph-1",
                                     figure=px.scatter_mapbox(
                                         mean_data,
+                                        title="Production d'electricité estimée en KWh",
                                         lat="latitude",
                                         lon="longitude",
                                         color="production",  # Affichage basé sur la température moyenne
@@ -491,6 +492,7 @@ ensoleillement_content = html.Div(
                                     id="v",
                                     figure=px.scatter_mapbox(
                                         mean_data,
+                                        title="Ensoleillement quotidien moyen en heures",
                                         lat="latitude",
                                         lon="longitude",
                                         color="ensoleillement",  # Affichage basé sur l'ensoleillement
@@ -661,6 +663,7 @@ temperature_content = html.Div(
                                     id="graph-1",
                                     figure=px.scatter_mapbox(
                                         mean_data,
+                                        title="Température quotidienne moyenne en °C",
                                         lat="latitude",
                                         lon="longitude",
                                         color="temperature",  # Affichage basé sur la température moyenne
@@ -835,6 +838,7 @@ precipitations_content = html.Div(
                                     id="graph-1",
                                     figure=px.scatter_mapbox(
                                         mean_data,
+                                        title="Précipitation quotidienne moyenne en mm",
                                         lat="latitude",
                                         lon="longitude",
                                         color="precipitation",  # Affichage basé sur la précipitation
@@ -1254,11 +1258,12 @@ def update_map(clickData):
     fig = px.choropleth_mapbox(
         geojson={'type': 'FeatureCollection', 'features': communes_geo_data},
         featureidkey="properties.name",  # Identifier par le nom de la commune
+        title="Consommation annuelle d'electricité en KWh",
         locations=commune_names,  # Communes du GeoJSON
         color=consommation_values,  # Coloration par la consommation d'électricité
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
-        zoom=10,
+        zoom=9.5,
         range_color=[0,7000],
         center={"lat": 46.2044, "lon": 6.1432}  # Centré sur Genève
     )
