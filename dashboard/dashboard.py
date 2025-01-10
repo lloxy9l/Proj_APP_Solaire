@@ -307,8 +307,8 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Température", className="card-title"),
-                                html.P(f"{global_means['temperature']:.2f}°C/jour", className="card-text"),
+                                html.P("Température", className="card-title"),
+                                html.H4(f"{global_means['temperature']:.2f}°C/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -318,8 +318,8 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Précipitations", className="card-title"),
-                                html.P(f"{global_means['precipitation']:.2f} mm/jour", className="card-text"),
+                                html.P("Précipitations", className="card-title"),
+                                html.H4(f"{global_means['precipitation']:.2f} mm/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -329,8 +329,8 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Ensoleillement", className="card-title"),
-                                html.P(f"{global_means['ensoleillement']:.2f} heures/jour", className="card-text"),
+                                html.P("Ensoleillement", className="card-title"),
+                                html.H4(f"{global_means['ensoleillement']:.2f} heures/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -340,8 +340,8 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Irradiance", className="card-title"),
-                                html.P(f"{global_means['irradiance']:.2f} W/m²/jour", className="card-text"),
+                                html.P("Irradiance", className="card-title"),
+                                html.H4(f"{global_means['irradiance']:.2f} W/m²/jour", className="card-text"),
                             ]
                         ),
                     ],
@@ -351,8 +351,8 @@ main_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                html.H4("Consommation éléctrique moyenne", className="card-title"),
-                                html.P(f"{global_means['consommation']:.2f} GWh/année", className="card-text"),
+                                html.P("Consommation éléctrique moyenne", className="card-title"),
+                                html.H4(f"{global_means['consommation']:.2f} GWh/année", className="card-text"),
                             ]
                         ),
                     ],
@@ -363,10 +363,8 @@ main_content = html.Div(
         # Section des cartes pour les graphiques
         html.Div(
             style={
-                "display": "grid",
-                "grid-template-rows": "auto 1fr",  # Première ligne de taille automatique (pour le titre), deuxième ligne flexible
-                "grid-template-columns": "1fr",  # Une seule colonne pour la première ligne
-                "gap": "20px",  # Espace entre les cartes
+                "width":"100%",
+                "height":"100vh",
             },
             children=[
                 # Première ligne - 1 colonne
@@ -387,89 +385,8 @@ main_content = html.Div(
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
                                     ),
-                                    style={"cursor": "url('assets/img/panneau.png') 4 12 ,crosshair"},
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-
-                # Deuxième ligne - 2 colonnes
-                html.Div(
-                    style={
-                        "display": "grid",
-                        "grid-template-columns": "1fr 1fr",  # 2 colonnes
-                        "gap": "20px",  # Espacement entre les cartes
-                    },
-                    children=[
-                        # Deuxième carte
-                        dbc.Card(
-                            [
-                                dbc.CardBody(
-                                    [
-                                        dcc.Graph(
-                                            id="graph-2",
-                                            figure={
-                                                "data": [
-                                                    {
-                                                        "values": [50, 30, 20],
-                                                        "labels": ["Soleil", "Nuages", "Pluie"],
-                                                        "type": "pie",
-                                                    }
-                                                ],
-                                                "layout": {"title": "Météo"},
-                                            },
-                                        )
-                                    ]
-                                ),
-                            ]
-                        ),
-
-                        # Troisième carte
-                        dbc.Card(
-                            [
-                                dbc.CardBody(
-                                    [
-                                        dcc.Graph(
-                                            id="graph-3",
-                                            figure={
-                                                "data": [
-                                                    {
-                                                        "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
-                                                        "y": [12, 19, 3, 5, 2],
-                                                        "type": "bar",
-                                                        "name": "Précipitations",
-                                                    }
-                                                ],
-                                                "layout": {"title": "Précipitations"},
-                                            },
-                                        )
-                                    ]
-                                ),
-                            ]
-                        ),
-                    ],
-                ),
-
-                # Carte 4 (si vous voulez en ajouter une autre, vous pouvez la placer dans cette section)
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-4",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": [1, 2, 3, 4],
-                                                "y": [3, 4, 5, 6],
-                                                "type": "scatter",
-                                                "mode": "markers",
-                                                "name": "Points",
-                                            }
-                                        ],
-                                        "layout": {"title": "Données diverses"},
-                                    },
+                                    style={"cursor": "url('assets/img/panneau.png') 4 12 ,crosshair", "width":"100%",
+                "height":"calc(100vh - 350px)",},
                                 )
                             ]
                         ),
