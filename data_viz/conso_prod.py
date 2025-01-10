@@ -1,177 +1,157 @@
 import dash
 from dash import dcc, html
-from dash.dependencies import Output, Input
 import plotly.express as px
 import pandas as pd
 import mysql.connector
 import json
-
-# Paramètres de la base de données
 from config_bdd import host, user, password, database
 
-def get_db_data(query):
-    # Établir la connexion
-    conn = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        database=database,
-        charset="utf8",
-    )
-    
-    # Lire les données avec pandas
-    df = pd.read_sql(query, conn)
-    
-    # Fermer la connexion
+# Charger les données géospatiales
+with open('data_viz/geo_data_boundaries.geojson', 'r', encoding='utf-8') as file:
+    geojson_data = json.load(file)
+
+def fetch_data():
+    conn = mysql.connector.connect(host=host, user=user, password=password, database=database, charset="utf8")
+    with conn.cursor(dictionary=True,buffered=True) as c:
+        c.execute("""
+            SELECT p.latitude, p.longitude, m.temperature, m.ensoleillement, m.irradiance, m.precipitation, m.date_collecte, m.idpoint 
+            FROM 2026_solarx_pointsgps p
+            JOIN 2026_solarx_mesures m ON p.idpoint = m.idpoint;
+        """)
+        data = c.fetchall()
+        c.execute("""
+            SELECT p.adresse, p.idpoint
+            FROM 2026_solarx_pointsgps p;
+        """)
+        data_point = c.fetchall()
+        c.execute("SELECT nom_commune, consommation FROM `2026_solarx_consommation` WHERE annee = 2023;")
+        data_conso = c.fetchall()
     conn.close()
     
-    return df
+    df = pd.DataFrame(data)
+    df["date_collecte"] = pd.to_datetime(df["date_collecte"])
+    df[["temperature", "irradiance", "precipitation", "ensoleillement"]] = df[["temperature", "irradiance", "precipitation", "ensoleillement"]].apply(pd.to_numeric, errors='coerce')
+    df["production"] = df["irradiance"] * 365 * 3
 
-def get_conso_data():
-    """
-    Récupère la consommation des communes.
-    """
-    query = """
-    SELECT nom_commune, consommation, annee
-    FROM 2026_solarx_consommation
-    """
-    return get_db_data(query)
+    conso_df = pd.DataFrame(data_conso)
+    conso_df["consommation"] = pd.to_numeric(conso_df["consommation"], errors='coerce')
 
-def get_prod_data():
-    """
-    Récupère la production estimée des communes.
-    """
-    query = """
-    SELECT latitude, longitude, irradiance, adresse, date_collecte 
-    FROM 2026_solarx_pointsgps
-    JOIN 2026_solarx_mesures 
-    ON 2026_solarx_pointsgps.idpoint = 2026_solarx_mesures.idpoint
-    """
-    return get_db_data(query)
+    print("Data collected")
+    return df, conso_df, data_point
 
-def load_geojson(filepath):
-    """
-    Charge le fichier GeoJSON contenant les polygones des communes.
-    
-    :param filepath: Chemin vers le fichier GeoJSON.
-    :return: Les données du fichier GeoJSON.
-    """
-    with open(filepath, 'r', encoding='utf-8') as file:
-        geojson_data = json.load(file)
-    return geojson_data
+def extract_commune(commune_df, df_villes_conso):
+    # Conversion des noms de communes en un ensemble pour des comparaisons rapides
+    commune_names = set(df_villes_conso["nom_commune"].str.strip().str.lower())
+    commune_to_points = {}
 
-def extract_commune_from_adresse(adresse):
-    """
-    Extrait le nom de la commune depuis la colonne 'adresse'.
-    
-    :param adresse: Chaîne de caractère contenant l'adresse.
-    :return: Nom de la commune (partie après la première virgule).
-    """
-    try:
-        return adresse.split(',')
-    except IndexError:
-        return None
+    if "adresse" in commune_df.columns:
+        for _, row in commune_df.iterrows():
+            adresse = row["adresse"]
+            idpoint = row["idpoint"]
+            # Pour chaque ville dans l'adresse
+            for ville in adresse.split(','):
+                ville = ville.strip().lower()
+                if ville in commune_names:
+                    # Ajouter idpoint à la liste associée à la ville
+                    if ville not in commune_to_points:
+                        commune_to_points[ville] = []
+                    commune_to_points[ville].append(idpoint)
+                    break
+    else:
+        print("Colonne 'adresse' introuvable dans le DataFrame.")
 
-def assign_communes_to_prod_df(prod_df):
-    """
-    Ajoute une colonne 'ville' à prod_df avec les noms des communes extraits
-    depuis la colonne 'adresse'.
-    
-    :param prod_df: DataFrame contenant les données de production.
-    :return: DataFrame avec une colonne 'ville' ajoutée.
-    """
-    prod_df['ville'] = prod_df['adresse'].apply(extract_commune_from_adresse)
-    return prod_df
+    # Convertir le dictionnaire en liste comme souhaité
+    return [[ville, points] for ville, points in commune_to_points.items()]
 
-def calculer_ratio(prod_df, conso_df):
-    """
-    Calcule le ratio production/consommation pour chaque ville présente dans les DataFrames.
-    
-    :param prod_df: DataFrame contenant les données de production (avec des colonnes 'latitude', 'longitude', 'adresse', et 'irradiance').
-    :param conso_df: DataFrame contenant les données de consommation (avec des colonnes 'nom_commune' et 'consommation').
-    :return: Un dictionnaire avec le ratio production/consommation pour chaque ville.
-    """
-    # Associer les noms des villes à prod_df à partir de l'adresse
-    prod_df = assign_communes_to_prod_df(prod_df)
 
-    # Filtrer les données pour éviter les valeurs manquantes ou incorrectes
-    prod_df_clean = prod_df.dropna(subset=['ville', 'irradiance'])
-    conso_df_clean = conso_df.dropna(subset=['nom_commune', 'consommation'])
-
-    # Conversion de l'irradiance en numérique pour éviter les erreurs
-    prod_df_clean['irradiance'] = pd.to_numeric(prod_df_clean['irradiance'], errors='coerce')
-
-    # Calcul du ratio production/consommation pour chaque ville
+def calculer_ratio(prod_df, conso_df, commune_df):
+    communes_en_commun = extract_commune(commune_df, conso_df)
     ratio_dict = {}
-    for commune in conso_df_clean['nom_commune'].unique():
-        # Récupérer la consommation pour la commune
-        consommation = conso_df_clean[conso_df_clean['nom_commune'] == commune]['consommation'].sum()
+    for commune, idpoints in communes_en_commun:
+        # Assurez-vous que les noms sont normalisés avant la comparaison
+        commune_normalized = commune.lower().strip()
         
-        # Récupérer l'irradiance moyenne pour la commune
-        mean_irradiance = prod_df_clean[prod_df_clean['ville'] == commune]['irradiance'].mean() * 365 * 3
+        # Normalisation des noms pour la recherche dans le DataFrame
+        consommation_moyenne = conso_df[
+            conso_df['nom_commune'].str.lower().str.strip() == commune_normalized
+        ]['consommation'].mean()
         
-        # Assurer que nous avons des données pour les deux (consommation et production)
-        if consommation > 0 and mean_irradiance > 0:
-            ratio_dict[commune] = mean_irradiance / consommation
+        production_moyenne = prod_df[
+            prod_df['idpoint'].isin(idpoints)
+        ]['production'].mean()
+        
+        
+        if consommation_moyenne > 0 and production_moyenne > 0:
+            ratio_dict[commune_normalized] = production_moyenne / consommation_moyenne
     
     return ratio_dict
+
+
+
+
 
 # Initialisation de l'application Dash
 app = dash.Dash(__name__)
 
-# Charger les fichiers de données et le fichier GeoJSON
-geojson_data = load_geojson('data_viz/geo_data_boundaries.geojson')
-conso_df = get_conso_data()
-prod_df = get_prod_data()
+# Chargement des données
+data_meteo, data_conso, data_commune = fetch_data()
 
-# Calculer le ratio production/consommation pour chaque commune
-ratio_dict = calculer_ratio(prod_df, conso_df)
+prod_df = pd.DataFrame(data_meteo)
+conso_df = pd.DataFrame(data_conso)
+commune_df = pd.DataFrame(data_commune)
 
-# Layout de l'application
+# Calculer le ratio
+ratio_dict = calculer_ratio(prod_df, conso_df, commune_df)
+
+print("Ratios calculés :", ratio_dict)
+
+# Extraire les noms des communes depuis geojson_data
+commune_names_geojson = [ft['properties'].get('name', 'Inconnu').lower().strip() for ft in geojson_data['features']]
+
+# Filtrer les communes et leurs ratios
+filtered_commune_names = []
+filtered_ratio_values = []
+
+for commune, ratio in ratio_dict.items():
+    commune_lower = commune.lower().strip()
+    if ratio > 0 and commune_lower in commune_names_geojson:
+        filtered_commune_names.append(commune.capitalize())
+        filtered_ratio_values.append(ratio)
+
+# Vérification de la cohérence des données
+if len(filtered_commune_names) != len(filtered_ratio_values):
+    print("Erreur : les noms des communes et les valeurs des ratios ne correspondent pas !")
+
+# Création de la carte
+filtered_features = [
+    feature for feature in geojson_data['features']
+    if feature['properties'].get('name', '').lower().strip() in [name.lower().strip() for name in filtered_commune_names]
+]
+
+fig = px.choropleth_mapbox(
+    geojson={
+        'type': 'FeatureCollection',
+        'features': filtered_features
+    },
+    featureidkey="properties.name",
+    locations=filtered_commune_names,
+    color=filtered_ratio_values,
+    color_continuous_scale="RdYlGn",
+    mapbox_style="open-street-map",
+    zoom=10,
+    range_color=[0,10],
+    center={"lat": 46.2044, "lon": 6.1432},
+    title="Ratio Production/Consommation par Commune"
+)
+
+fig.update_traces(marker_line_width=2, marker_line_color="white")
+
+# Layout de l'application Dash
 app.layout = html.Div([
-    dcc.Graph(id='map-graph', style={'height': '800px'}),
-    dcc.Interval(
-        id='interval-component',
-        interval=10*1000,  # Mise à jour toutes les 10 secondes
-        n_intervals=0
-    )
+    html.H1("Carte des Ratios Production/Consommation par Commune", style={'text-align': 'center'}),
+    dcc.Graph(id='map-graph', figure=fig, style={'height': '800px'}),
 ])
 
-# Callback pour mettre à jour la carte
-@app.callback(
-    Output('map-graph', 'figure'),
-    Input('interval-component', 'n_intervals')
-)
-def update_map(n_intervals):
-    # Extraire les noms des communes et leurs ratios production/consommation
-    commune_names = [ft['properties'].get('name', 'Inconnu') for ft in geojson_data['features']]
-    ratio_values = [ratio_dict.get(name, 0) for name in commune_names]
-
-    # Filtrer pour ne garder que les communes dont le ratio est supérieur à 0
-    filtered_commune_names = [name for name, ratio in zip(commune_names, ratio_values) if ratio > 0]
-    filtered_ratio_values = [ratio for ratio in ratio_values if ratio > 0]
-
-    # Création de la carte avec les polygones colorés en fonction du ratio production/consommation
-    fig = px.choropleth_mapbox(
-        geojson={'type': 'FeatureCollection', 'features': geojson_data['features']},
-        featureidkey="properties.name",  # Identifier par le nom de la commune
-        locations=filtered_commune_names,  # Communes du GeoJSON
-        color=filtered_ratio_values,  # Coloration par le ratio prod/conso
-        color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
-        mapbox_style="open-street-map",
-        zoom=10,
-        center={"lat": 46.2044, "lon": 6.1432}  # Centré sur Genève
-    )
-
-    # Personnaliser l'apparence des polygones
-    fig.update_traces(
-        marker_line_width=2,
-        marker_line_color="white",
-        opacity=0.5
-    )
-
-    return fig
-
-# Exécution de l'application Dash
+# Exécution de l'application
 if __name__ == '__main__':
     app.run_server(debug=True)

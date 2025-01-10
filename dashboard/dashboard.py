@@ -15,44 +15,35 @@ import pandas as pd
 ######################              Recuperation données bdd pour carte meteo                            #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
-# Fonction pour récupérer les données
 def fetch_data():
-    conn = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        database=database,
-        charset="utf8",
-    )
-    with conn.cursor(dictionary=True) as c:
+    conn = mysql.connector.connect(host=host, user=user, password=password, database=database, charset="utf8")
+    with conn.cursor(dictionary=True,buffered=True) as c:
         c.execute("""
-            SELECT p.latitude, p.longitude, m.temperature, 
-                   m.ensoleillement,m.irradiance,m.precipitation, m.date_collecte 
+            SELECT p.latitude, p.longitude, m.temperature, m.ensoleillement, m.irradiance, m.precipitation, m.date_collecte, m.idpoint 
             FROM 2026_solarx_pointsgps p
-            JOIN 2026_solarx_mesures m 
-            ON p.idpoint = m.idpoint;
+            JOIN 2026_solarx_mesures m ON p.idpoint = m.idpoint;
         """)
         data = c.fetchall()
         c.execute("""
-            SELECT consommation FROM `2026_solarx_consommation` where annee=2023;
+            SELECT p.adresse, p.idpoint
+            FROM 2026_solarx_pointsgps p;
         """)
-        data_conso=c.fetchall()
+        data_point = c.fetchall()
+        c.execute("SELECT nom_commune, consommation FROM `2026_solarx_consommation` WHERE annee = 2023;")
+        data_conso = c.fetchall()
     conn.close()
-    print('Data collected')
-    # Convertir les données en DataFrame
+    
     df = pd.DataFrame(data)
     df["date_collecte"] = pd.to_datetime(df["date_collecte"])
-    df["temperature"] = pd.to_numeric(df["temperature"], errors='coerce')
-    df["irradiance"] = pd.to_numeric(df["irradiance"], errors='coerce')
-    df["precipitation"] = pd.to_numeric(df["precipitation"], errors='coerce')
-    df["ensoleillement"] = pd.to_numeric(df["ensoleillement"], errors='coerce')
-    df["production"] = pd.to_numeric(df["irradiance"]*365*3, errors='coerce')
+    df[["temperature", "irradiance", "precipitation", "ensoleillement"]] = df[["temperature", "irradiance", "precipitation", "ensoleillement"]].apply(pd.to_numeric, errors='coerce')
+    df["ensoleillement"] = df["ensoleillement"]*0.001
+    df["production"] = df["irradiance"] * 365 * 3
 
-    df_conso = pd.DataFrame(data_conso)
-    df_conso["consommation"] = pd.to_numeric(df_conso["consommation"], errors='coerce')
+    conso_df = pd.DataFrame(data_conso)
+    conso_df["consommation"] = pd.to_numeric(conso_df["consommation"], errors='coerce')
 
-    
-    return df,df_conso
+    print("Data collected")
+    return df, conso_df, data_point
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -60,11 +51,13 @@ def fetch_data():
 ##########################################################################################################################################
 ##########################################################################################################################################
 # Charger les données
-data = fetch_data()
-data_meteo=data[0]
+data_meteo,data_conso,data_commune = fetch_data()
+
 df = pd.DataFrame(data_meteo)
-data_conso = data[1]
 df_conso = pd.DataFrame(data_conso)
+prod_df = pd.DataFrame(data_meteo)
+commune_df = pd.DataFrame(data_commune)
+
 
 # Calculer la moyenne des valeurs pour chaque point GPS
 mean_data = df.groupby(["latitude", "longitude"]).mean().reset_index()
@@ -76,7 +69,7 @@ global_means = {
     "consommation":df_conso["consommation"].mean()/1000,
 }
 
-
+#Données pour les lines charts
 datalinechart=df
 # Extract year and month for grouping
 datalinechart['year_month'] = datalinechart['date_collecte'].dt.to_period('M')
@@ -86,11 +79,10 @@ monthly_datalinechart = datalinechart.groupby('year_month').mean()
 
 # Calculate monthly averages across all years
 monthly_data = df.groupby('year_month').mean()
+
+#Données pour la distribution
 # Extraire le mois et l'année
-
-
 df["mois"] = df["date_collecte"].dt.month  # Extraire uniquement le mois (1-12)
-
 # Grouper par mois et calculer la moyenne globale de chaque paramètre (ensoleillement, température, précipitation)
 df_mois = df.groupby("mois")[["ensoleillement", "temperature", "precipitation"]].agg({
     "ensoleillement": "mean",  # Moyenne de l'ensoleillement
@@ -149,6 +141,87 @@ geojson_data = load_geojson('geo_data_boundaries.geojson')
 df = get_data()
 communes_geo_data = get_communes_data(df, geojson_data)
 print("Data communed fetched")
+
+##########################################################################################################################################
+##########################################################################################################################################
+######################              Récuperation données bdd pour carte ratio                            #################################
+##########################################################################################################################################
+##########################################################################################################################################
+
+def extract_commune(commune_df, df_villes_conso):
+    # Conversion des noms de communes en un ensemble pour des comparaisons rapides
+    commune_names = set(df_villes_conso["nom_commune"].str.strip().str.lower())
+    commune_to_points = {}
+
+    if "adresse" in commune_df.columns:
+        for _, row in commune_df.iterrows():
+            adresse = row["adresse"]
+            idpoint = row["idpoint"]
+            # Pour chaque ville dans l'adresse
+            for ville in adresse.split(','):
+                ville = ville.strip().lower()
+                if ville in commune_names:
+                    # Ajouter idpoint à la liste associée à la ville
+                    if ville not in commune_to_points:
+                        commune_to_points[ville] = []
+                    commune_to_points[ville].append(idpoint)
+                    break
+    else:
+        print("Colonne 'adresse' introuvable dans le DataFrame.")
+
+    # Convertir le dictionnaire en liste comme souhaité
+    return [[ville, points] for ville, points in commune_to_points.items()]
+
+
+def calculer_ratio(prod_df, conso_df, commune_df):
+    communes_en_commun = extract_commune(commune_df, conso_df)
+    ratio_dict = {}
+    for commune, idpoints in communes_en_commun:
+        # Assurez-vous que les noms sont normalisés avant la comparaison
+        commune_normalized = commune.lower().strip()
+        
+        # Normalisation des noms pour la recherche dans le DataFrame
+        consommation_moyenne = conso_df[
+            conso_df['nom_commune'].str.lower().str.strip() == commune_normalized
+        ]['consommation'].mean()
+        
+        production_moyenne = prod_df[
+            prod_df['idpoint'].isin(idpoints)
+        ]['production'].mean()
+        
+        
+        if consommation_moyenne > 0 and production_moyenne > 0:
+            ratio_dict[commune_normalized] = production_moyenne / consommation_moyenne
+    
+    return ratio_dict
+# Calculer le ratio
+ratio_dict = calculer_ratio(prod_df, df_conso, commune_df)
+
+print("Ratios calculés :", ratio_dict)
+
+# Extraire les noms des communes depuis geojson_data
+commune_names_geojson = [ft['properties'].get('name', 'Inconnu').lower().strip() for ft in geojson_data['features']]
+
+# Filtrer les communes et leurs ratios
+filtered_commune_names = []
+filtered_ratio_values = []
+
+for commune, ratio in ratio_dict.items():
+    commune_lower = commune.lower().strip()
+    if ratio > 0 and commune_lower in commune_names_geojson:
+        filtered_commune_names.append(commune.capitalize())
+        filtered_ratio_values.append(ratio)
+
+# Vérification de la cohérence des données
+if len(filtered_commune_names) != len(filtered_ratio_values):
+    print("Erreur : les noms des communes et les valeurs des ratios ne correspondent pas !")
+
+# Création de la carte
+filtered_features = [
+    feature for feature in geojson_data['features']
+    if feature['properties'].get('name', '').lower().strip() in [name.lower().strip() for name in filtered_commune_names]
+]
+
 
 
 
@@ -250,6 +323,16 @@ vertical_header = html.Div(
                         html.Span("Electricité", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="/electricite",
+                ),
+                html.A(
+                    children=[
+                        html.Img(
+                            src="assets/img/team.png",  # Icône pour Rapports
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
+                        ),
+                        html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
+                    ],
+                    href="/credit",
                 ),
             ]
         ),
@@ -418,29 +501,38 @@ main_content = html.Div(
             children=[
                 # Première ligne - 1 colonne
                 dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-1",
-                                    figure=px.scatter_mapbox(
-                                        mean_data,
-                                        title="Production d'electricité estimée en KWh",
-                                        lat="latitude",
-                                        lon="longitude",
-                                        color="production",  # Affichage basé sur la température moyenne
-                                        color_continuous_scale="RdYlGn",  # Palette de couleurs
-                                        hover_data=["production"],  # Infos affichées au survol
-                                        size=[1 for _ in range(len(mean_data))],
-                                        mapbox_style="carto-positron",
-                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
-                                    style={"cursor": "url('assets/img/panneau.png') 4 12 ,crosshair", "width":"100%",
-                "height":"calc(100vh - 350px)",},
-                                )
-                            ]
-                        ),
-                    ]
+                [
+                    dbc.CardBody(
+                        [
+                            dcc.Graph(
+                                id="graph-1",
+                                figure=px.scatter_mapbox(
+                                    mean_data,
+                                    title="Production d'electricité estimée en KWh",
+                                    lat="latitude",
+                                    lon="longitude",
+                                    color="production",  # Affichage basé sur la température moyenne
+                                    color_continuous_scale="RdYlGn",  # Palette de couleurs
+                                    hover_data=["production"],  # Infos affichées au survol
+                                    size=[1 for _ in range(len(mean_data))],
+                                    mapbox_style="carto-positron",
+                                    center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
+                                ).update_layout(
+                                    title={
+                                        "text": "Production d'electricité estimée en KWh",
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
+                                style={
+                                    "cursor": "url('assets/img/panneau.png') 4 12, crosshair",
+                                    "width": "100%",
+                                    "height": "calc(100vh - 350px)",
+                                },
+                            )
+                        ]
+                    ),
+                ]
                 ),
             ],
         ),
@@ -466,13 +558,19 @@ fig_ens.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(),
                               name='Avg Trend', 
                               line=dict(dash='dash', width=2)))
 fig_ens.update_layout(
-    title='Monthly Average Ensoleillement',
     xaxis_title='Month',
     yaxis_title='Ensoleillement (hours)',
     template='plotly_white',
     xaxis=dict(tickformat='%Y-%m'),
     yaxis=dict(showgrid=True, zeroline=True),
-    legend=dict(title='Legend', x=0.01, y=0.99)
+    legend=dict(title='Legend', x=0.01, y=0.99),
+    title={
+            "text": "Monthly Average Ensoleillement",
+            "font": {
+                "size": 22,
+            },
+            "x": 0.5,  # Centrer le titre horizontalement
+    }
 )
 # Contenu ensoleillement
 ensoleillement_content = html.Div(
@@ -580,7 +678,13 @@ ensoleillement_content = html.Div(
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
+                                    ).update_layout(
+                                    title={
+                                        "text": "Ensoleillement quotidien moyen en heures",
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
                                     style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
@@ -610,7 +714,7 @@ ensoleillement_content = html.Div(
                                     id="graph-2",
                                     figure=fig_ens,
                                     style={"width": "100%", "height": "100%"},
-                                ),
+                                )
                             ]
                         ),
                     ]
@@ -634,6 +738,11 @@ ensoleillement_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -664,13 +773,19 @@ fig_temp.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(),
                               name='Avg Trend', 
                               line=dict(dash='dash', width=2)))
 fig_temp.update_layout(
-    title='Monthly Average Temperature',
     xaxis_title='Month',
     yaxis_title='Temperature (°C)',
     template='plotly_white',
     xaxis=dict(tickformat='%Y-%m'),
     yaxis=dict(showgrid=True, zeroline=True),
-    legend=dict(title='Legend', x=0.01, y=0.99)
+    legend=dict(title='Legend', x=0.01, y=0.99),
+    title={
+            "text": "Monthly Average Temperature",
+            "font": {
+                "size": 22,
+            },
+            "x": 0.5,  # Centrer le titre horizontalement
+    }
 )
 # Contenu température
 temperature_content = html.Div(
@@ -776,7 +891,12 @@ temperature_content = html.Div(
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
+                                    ).update_layout(
+                                    title={
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
                                     style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
@@ -806,7 +926,7 @@ temperature_content = html.Div(
                                     
                                     figure=fig_temp,
                                     style={"width": "100%", "height": "100%"},
-                                )
+                                ),
                             ]
                         ),
                     ]
@@ -830,6 +950,10 @@ temperature_content = html.Div(
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -860,13 +984,19 @@ fig_prec.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(),
                                name='Avg Trend', 
                                line=dict(dash='dash', width=2)))
 fig_prec.update_layout(
-    title='Monthly Average Precipitation',
     xaxis_title='Month',
     yaxis_title='Precipitation (mm)',
     template='plotly_white',
     xaxis=dict(tickformat='%Y-%m'),
     yaxis=dict(showgrid=True, zeroline=True),
-    legend=dict(title='Legend', x=0.01, y=0.99)
+    legend=dict(title='Legend', x=0.01, y=0.99),
+    title={
+            "text": "Monthly Average Precipitation",
+            "font": {
+                "size": 22,
+            },
+            "x": 0.5,  # Centrer le titre horizontalement
+    }
 )
 # Contenu Précipitations
 precipitations_content = html.Div(
@@ -970,12 +1100,17 @@ precipitations_content = html.Div(
                                         lat="latitude",
                                         lon="longitude",
                                         color="precipitation",  # Affichage basé sur la précipitation
-                                        color_continuous_scale="Blues",  # Palette de couleurs
+                                        color_continuous_scale=["#a9cce3", "#5499c7", "#2471a3", "#1f618d", "#243852"],  # Palette de couleurs
                                         hover_data=["precipitation"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
                                         center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ),
+                                    ).update_layout(
+                                    title={
+                                        "font": {"size": 26,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
+                                ),
                                     style={"width":"100%", "height":"calc(100vh - 350px)",},
                                 )
                             ]
@@ -1005,7 +1140,7 @@ precipitations_content = html.Div(
                                     id="graph-2",
                                     figure=fig_prec,
                                     style={"width": "100%", "height": "100%"},
-                                )
+                                ),
                             ]
                         ),
                     ]
@@ -1025,11 +1160,15 @@ precipitations_content = html.Div(
                                         title="Distribution des precipitation par mois",
                                         labels={"Precipitation": "Precipitation en mm", "mois": "Mois"},
                                         color="precipitation",  # Utilisation d'une échelle de couleur pour la precipitation
-                                        color_continuous_scale="Blues",
+                                        color_continuous_scale=["#a9cce3", "#5499c7", "#2471a3", "#1f618d", "#243852"],
                                         
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
                                         paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                    }
                                     ),
                                     style={"width": "100%", "height": "100%"},
                                 )
@@ -1043,11 +1182,49 @@ precipitations_content = html.Div(
 )
 
 
+
 ##########################################################################################################################################
 ##########################################################################################################################################
 ######################              HTML conteneur electricité                                           #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
+fig_ratio = px.choropleth_mapbox(
+    geojson={
+        'type': 'FeatureCollection',
+        'features': filtered_features
+    },
+    featureidkey="properties.name",
+    locations=filtered_commune_names,
+    color=filtered_ratio_values,
+    color_continuous_scale="RdYlGn",
+    mapbox_style="open-street-map",
+    zoom=9,
+    range_color=[0,10],
+    center={"lat": 46.2044, "lon": 6.1432},
+    title="Ratio Production/Consommation par Commune"
+)
+
+fig_ratio.update_traces(marker_line_width=2, marker_line_color="white")
+figure_pie = go.Figure(
+    data=[
+        go.Pie(
+            values=[77, 11, 12],
+            labels=["Hydraulique", "Solaire", "Incinération des déchets"]
+        )
+    ]
+)
+
+# Mise à jour de la mise en page de la figure
+figure_pie.update_layout(
+    title="Production électricité du canton de Genève",
+    plot_bgcolor='white',  # Fond du graphique en blanc
+    paper_bgcolor='white',  # Fond extérieur en blanc
+    title_font=dict(
+        size=22,  # Taille du titre
+    ),
+    title_x=0.5  # Centrer le titre horizontalement
+)
+
 electricite_content = html.Div(
     style={
         "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
@@ -1137,6 +1314,7 @@ electricite_content = html.Div(
                             [
                                 dcc.Graph(
                                     id='map-graph',
+                                    
                                     style={
                                         'height': 'calc(100vh - 350px)',
                                         'width': '100%'
@@ -1172,16 +1350,7 @@ electricite_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-2",
-                                    figure={ 
-                                        "data": [
-                                            {
-                                                "values": [77, 11, 12],
-                                                "labels": ["Hydraulique", "Solaire", "Incinération des déchets"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Production électricité du canton de Genève"},
-                                    },
+                                    figure=figure_pie,
                                 )
                             ]
                         ),
@@ -1195,17 +1364,14 @@ electricite_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-3",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": ["Lun", "Mar", "Mer", "Jeu", "Ven"],
-                                                "y": [12, 19, 3, 5, 2],
-                                                "type": "bar",
-                                                "name": "Electricité",
-                                            }
-                                        ],
-                                        "layout": {"title": "Electricité"},
-                                    },
+                                    figure=fig_ratio.update_layout(
+                                        plot_bgcolor='white',  # Fond du graphique en blanc
+                                        paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                        }
+                                    )
                                 )
                             ]
                         ),
@@ -1218,7 +1384,7 @@ electricite_content = html.Div(
 
 ##########################################################################################################################################
 ##########################################################################################################################################
-######################              HTML conteneur profile                                               #################################
+######################                                HTML conteneur profile                             #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
 #Profile content
@@ -1381,6 +1547,83 @@ profile_content = html.Div(
 )
 
 
+credit_content = html.Div(
+    style={
+        "margin-left": "80px",
+        "padding": "20px",
+        "display": "flex",
+        "justify-content": "center",
+        "align-items": "center",
+        "height": "810px",
+        "width": "917px",
+        "background-color": "#005dff",
+        "border-radius": "30px",
+        "position": "absolute",
+        "top": "50%",
+        "left": "50%",
+        "transform": "translate(-50%, -50%)",
+    },
+    children=[
+        html.Div(
+            style={
+                "background-color": "white",
+                "padding": "30px",
+                "border-radius": "10px",
+                "width": "800px",
+                "height": "705px",
+                "box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
+            },
+            children=[
+                # Titre de la page
+                html.Div(
+                    style={"text-align": "center", "margin-bottom": "20px"},
+                    children=[
+                        html.H1("Geneva Weather Data Collection", style={"color": "#005dff"}),
+                        html.P(
+                            "Projet réalisé par un groupe d'étudiants pour collecter et analyser les données météorologiques de la région de Genève.",
+                            style={"color": "#555"}
+                        )
+                    ]
+                ),
+
+                # Description du projet
+                html.Div(
+                    style={"margin-bottom": "20px"},
+                    children=[
+                        html.H2("Introduction", style={"color": "#005dff"}),
+                        html.P(
+                            "Ce projet vise à collecter des données météorologiques détaillées et fiables pour la région de Genève. Ces données sont essentielles pour des applications comme la planification urbaine, l'agriculture, et les projets d'énergie renouvelable."
+                        ),
+                        html.H2("Objectifs", style={"color": "#005dff"}),
+                        html.Ul([
+                            html.Li("Collecter des données sur la luminosité, la radiance, la température et les précipitations."),
+                            html.Li("Fournir des informations exploitables pour les parties prenantes locales."),
+                            html.Li("Créer une base de données robuste pour le stockage sécurisé des données.")
+                        ])
+                    ]
+                ),
+
+                # Liste des membres de l'équipe
+                html.Div(
+                    style={"margin-bottom": "20px"},
+                    children=[
+                        html.H2("Équipe", style={"color": "#005dff"}),
+                        html.Ul([
+                            html.Li("Maxens Soldan"),
+                            html.Li("Baptiste Renand"),
+                            html.Li("Arno Wilhelm"),
+                            html.Li("Degouey Corentin"),
+                            html.Li("Hassnaoui Walid"),
+                            html.Li("Bercier Thomas"),
+                            html.Li("Francielle Andrade Cardoso")
+                        ]),
+                        html.P("Coryright 2025")
+                    ]
+                ),
+            ]
+        )
+    ]
+)
 
 
 # Disposition principale
@@ -1419,6 +1662,8 @@ def display_content(pathname):
         return electricite_content
     elif pathname == "/profile_content":
         return profile_content
+    elif pathname =="/credit":
+        return credit_content
     else:
         return html.H1("Page non trouvée")
 
@@ -1493,6 +1738,13 @@ def update_menu_text_display(sidebar_width):
                 ],
                 href="/electricite",
             ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                ],
+                href="/credit",
+            ),
         ]
     else:
         # Si la largeur est agrandie, on montre les spans
@@ -1532,6 +1784,14 @@ def update_menu_text_display(sidebar_width):
                 ],
                 href="electricite",
             ),
+            html.A(
+                children=[
+                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
+                ],
+                href="credit",
+            ),
+            
         ]
 
 # Callback pour mettre à jour la carte et gérer les clics sur les zones
@@ -1566,9 +1826,17 @@ def update_map(clickData):
         color=consommation_values,  # Coloration par la consommation d'électricité
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
-        zoom=9.5,
+        zoom=9.3,
         range_color=[0,7000],
-        center={"lat": 46.2044, "lon": 6.1432}  # Centré sur Genève
+        center={"lat": 46.1833, "lon": 6.0833}  # Centré sur Genève
+    )
+    fig.update_layout(
+        plot_bgcolor='white',  # Fond du graphique en blanc
+        paper_bgcolor='white',  # Fond extérieur en blanc
+        title={
+        "font": {"size": 22,},  # Taille et gras du titre
+        "x": 0.5,  # Centrer le titre horizontalement
+        }
     )
 
     # Personnaliser l'apparence des polygones
