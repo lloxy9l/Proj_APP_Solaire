@@ -1196,7 +1196,6 @@ fig_ratio = px.choropleth_mapbox(
     locations=filtered_commune_names,
     color=filtered_ratio_values,
     color_continuous_scale="RdYlGn",
-    color="ratio",
     mapbox_style="open-street-map",
     zoom=9,
     range_color=[0,10],
@@ -1826,8 +1825,7 @@ def update_map(clickData):
         color=consommation_values,  # Coloration par la consommation d'électricité
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
-        zoom=10,
-        color="production",
+        zoom=9,
         range_color=[0,7000],
         center={"lat": 46.1833, "lon": 6.0833}  # Centré sur Genève
     )
