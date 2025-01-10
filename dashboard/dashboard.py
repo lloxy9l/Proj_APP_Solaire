@@ -1825,7 +1825,7 @@ def update_map(clickData):
         color=consommation_values,  # Coloration par la consommation d'électricité
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
-        zoom=9,
+        zoom=9.3,
         range_color=[0,7000],
         center={"lat": 46.1833, "lon": 6.0833}  # Centré sur Genève
     )
