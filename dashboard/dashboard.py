@@ -84,7 +84,11 @@ datalinechart['year_month'] = datalinechart['date_collecte'].dt.to_period('M')
 # Calculate monthly averages
 monthly_datalinechart = datalinechart.groupby('year_month').mean()
 
+# Calculate monthly averages across all years
+monthly_data = df.groupby('year_month').mean()
 # Extraire le mois et l'année
+
+
 df["mois"] = df["date_collecte"].dt.month  # Extraire uniquement le mois (1-12)
 
 # Grouper par mois et calculer la moyenne globale de chaque paramètre (ensoleillement, température, précipitation)
@@ -450,17 +454,17 @@ main_content = html.Div(
 ##########################################################################################################################################
 # Ensoleillement line chart graphe
 fig_ens = go.Figure()
-fig_ens.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
-                              y=monthly_datalinechart['ensoleillement'], 
+fig_ens.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(), 
+                              y=monthly_data['ensoleillement'], 
                               mode='lines+markers', 
                               name='Ensoleillement',
                               marker=dict(size=8),
                               line=dict(width=2)))
-fig_ens.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
-                              y=[monthly_datalinechart['ensoleillement'].mean()] * len(monthly_datalinechart), 
+fig_ens.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(), 
+                              y=monthly_data['ensoleillement'].expanding().mean(), 
                               mode='lines', 
-                              name='Average Trend', 
-                              line=dict(dash='dash', color='gray', width=2)))
+                              name='Avg Trend', 
+                              line=dict(dash='dash', width=2)))
 fig_ens.update_layout(
     title='Monthly Average Ensoleillement',
     xaxis_title='Month',
@@ -641,17 +645,17 @@ ensoleillement_content = html.Div(
 ##########################################################################################################################################
 #graphe line chart temperature
 fig_temp = go.Figure()
-fig_temp.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
-                              y=monthly_datalinechart['temperature'], 
+fig_temp.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(), 
+                              y=monthly_data['temperature'], 
                               mode='lines+markers', 
                               name='Temperature',
                               marker=dict(size=8),
                               line=dict(width=2)))
-fig_temp.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
-                              y=[monthly_datalinechart['temperature'].mean()] * len(monthly_datalinechart), 
+fig_temp.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(), 
+                              y=monthly_data['temperature'].expanding().mean(), 
                               mode='lines', 
-                              name='Average Trend', 
-                              line=dict(dash='dash', color='gray', width=2)))
+                              name='Avg Trend', 
+                              line=dict(dash='dash', width=2)))
 fig_temp.update_layout(
     title='Monthly Average Temperature',
     xaxis_title='Month',
@@ -831,17 +835,17 @@ temperature_content = html.Div(
 ##########################################################################################################################################
 ##########################################################################################################################################
 fig_prec = go.Figure()
-fig_prec.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
-                               y=monthly_datalinechart['precipitation'], 
+fig_prec.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(), 
+                               y=monthly_data['precipitation'], 
                                mode='lines+markers', 
                                name='Precipitation',
                                marker=dict(size=8),
                                line=dict(width=2)))
-fig_prec.add_trace(go.Scatter(x=monthly_datalinechart.index.to_timestamp(), 
-                               y=[monthly_datalinechart['precipitation'].mean()] * len(monthly_datalinechart), 
+fig_prec.add_trace(go.Scatter(x=monthly_data.index.to_timestamp(), 
+                               y=monthly_data['precipitation'].expanding().mean(), 
                                mode='lines', 
-                               name='Average Trend', 
-                               line=dict(dash='dash', color='gray', width=2)))
+                               name='Avg Trend', 
+                               line=dict(dash='dash', width=2)))
 fig_prec.update_layout(
     title='Monthly Average Precipitation',
     xaxis_title='Month',
