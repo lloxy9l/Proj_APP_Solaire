@@ -76,7 +76,7 @@ global_means = {
     "consommation":df_conso["consommation"].mean()/1000,
 }
 
-
+#Données pour les lines charts
 datalinechart=df
 # Extract year and month for grouping
 datalinechart['year_month'] = datalinechart['date_collecte'].dt.to_period('M')
@@ -86,11 +86,10 @@ monthly_datalinechart = datalinechart.groupby('year_month').mean()
 
 # Calculate monthly averages across all years
 monthly_data = df.groupby('year_month').mean()
+
+#Données pour la distribution
 # Extraire le mois et l'année
-
-
 df["mois"] = df["date_collecte"].dt.month  # Extraire uniquement le mois (1-12)
-
 # Grouper par mois et calculer la moyenne globale de chaque paramètre (ensoleillement, température, précipitation)
 df_mois = df.groupby("mois")[["ensoleillement", "temperature", "precipitation"]].agg({
     "ensoleillement": "mean",  # Moyenne de l'ensoleillement
@@ -1027,7 +1026,7 @@ precipitations_content = html.Div(
                                         lat="latitude",
                                         lon="longitude",
                                         color="precipitation",  # Affichage basé sur la précipitation
-                                        color_continuous_scale="Blues",  # Palette de couleurs
+                                        color_continuous_scale=["#a9cce3", "#5499c7", "#2471a3", "#1f618d", "#243852"],  # Palette de couleurs
                                         hover_data=["precipitation"],  # Infos affichées au survol
                                         size=[200 for _ in range(len(mean_data))],
                                         mapbox_style="carto-positron",
@@ -1087,7 +1086,7 @@ precipitations_content = html.Div(
                                         title="Distribution des precipitation par mois",
                                         labels={"Precipitation": "Precipitation en mm", "mois": "Mois"},
                                         color="precipitation",  # Utilisation d'une échelle de couleur pour la precipitation
-                                        color_continuous_scale="Blues",
+                                        color_continuous_scale=["#a9cce3", "#5499c7", "#2471a3", "#1f618d", "#243852"],
                                         
                                     ).update_layout(
                                         plot_bgcolor='white',  # Fond du graphique en blanc
@@ -1726,9 +1725,9 @@ def update_map(clickData):
         color=consommation_values,  # Coloration par la consommation d'électricité
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
-        zoom=9.5,
+        zoom=10,
         range_color=[0,7000],
-        center={"lat": 46.2044, "lon": 6.1432}  # Centré sur Genève
+        center={"lat": 46.1833, "lon": 6.0833}  # Centré sur Genève
     )
 
     # Personnaliser l'apparence des polygones
