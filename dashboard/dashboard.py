@@ -221,23 +221,7 @@ filtered_features = [
     if feature['properties'].get('name', '').lower().strip() in [name.lower().strip() for name in filtered_commune_names]
 ]
 
-fig_ratio = px.choropleth_mapbox(
-    geojson={
-        'type': 'FeatureCollection',
-        'features': filtered_features
-    },
-    featureidkey="properties.name",
-    locations=filtered_commune_names,
-    color=filtered_ratio_values,
-    color_continuous_scale="RdYlGn",
-    mapbox_style="open-street-map",
-    zoom=10,
-    range_color=[0,10],
-    center={"lat": 46.2044, "lon": 6.1432},
-    title="Ratio Production/Consommation par Commune"
-)
 
-fig_ratio.update_traces(marker_line_width=2, marker_line_color="white")
 
 
 # Initialisation de l'application Dash
@@ -1197,11 +1181,50 @@ precipitations_content = html.Div(
 )
 
 
+
 ##########################################################################################################################################
 ##########################################################################################################################################
 ######################              HTML conteneur electricité                                           #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
+fig_ratio = px.choropleth_mapbox(
+    geojson={
+        'type': 'FeatureCollection',
+        'features': filtered_features
+    },
+    featureidkey="properties.name",
+    locations=filtered_commune_names,
+    color=filtered_ratio_values,
+    color_continuous_scale="RdYlGn",
+    color="ratio",
+    mapbox_style="open-street-map",
+    zoom=9,
+    range_color=[0,10],
+    center={"lat": 46.2044, "lon": 6.1432},
+    title="Ratio Production/Consommation par Commune"
+)
+
+fig_ratio.update_traces(marker_line_width=2, marker_line_color="white")
+figure_pie = go.Figure(
+    data=[
+        go.Pie(
+            values=[77, 11, 12],
+            labels=["Hydraulique", "Solaire", "Incinération des déchets"]
+        )
+    ]
+)
+
+# Mise à jour de la mise en page de la figure
+figure_pie.update_layout(
+    title="Production électricité du canton de Genève",
+    plot_bgcolor='white',  # Fond du graphique en blanc
+    paper_bgcolor='white',  # Fond extérieur en blanc
+    title_font=dict(
+        size=22,  # Taille du titre
+    ),
+    title_x=0.5  # Centrer le titre horizontalement
+)
+
 electricite_content = html.Div(
     style={
         "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
@@ -1291,6 +1314,7 @@ electricite_content = html.Div(
                             [
                                 dcc.Graph(
                                     id='map-graph',
+                                    
                                     style={
                                         'height': 'calc(100vh - 350px)',
                                         'width': '100%'
@@ -1326,16 +1350,7 @@ electricite_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-2",
-                                    figure={ 
-                                        "data": [
-                                            {
-                                                "values": [77, 11, 12],
-                                                "labels": ["Hydraulique", "Solaire", "Incinération des déchets"],
-                                                "type": "pie",
-                                            }
-                                        ],
-                                        "layout": {"title": "Production électricité du canton de Genève"},
-                                    },
+                                    figure=figure_pie,
                                 )
                             ]
                         ),
@@ -1349,7 +1364,14 @@ electricite_content = html.Div(
                             [
                                 dcc.Graph(
                                     id="graph-3",
-                                    figure=fig_ratio,
+                                    figure=fig_ratio.update_layout(
+                                        plot_bgcolor='white',  # Fond du graphique en blanc
+                                        paper_bgcolor='white',  # Fond extérieur en blanc
+                                        title={
+                                        "font": {"size": 22,},  # Taille et gras du titre
+                                        "x": 0.5,  # Centrer le titre horizontalement
+                                        }
+                                    )
                                 )
                             ]
                         ),
@@ -1362,7 +1384,7 @@ electricite_content = html.Div(
 
 ##########################################################################################################################################
 ##########################################################################################################################################
-######################              HTML conteneur profile                                               #################################
+######################                                HTML conteneur profile                             #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
 #Profile content
@@ -1805,8 +1827,17 @@ def update_map(clickData):
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
         zoom=10,
+        color="production",
         range_color=[0,7000],
         center={"lat": 46.1833, "lon": 6.0833}  # Centré sur Genève
+    )
+    fig.update_layout(
+        plot_bgcolor='white',  # Fond du graphique en blanc
+        paper_bgcolor='white',  # Fond extérieur en blanc
+        title={
+        "font": {"size": 22,},  # Taille et gras du titre
+        "x": 0.5,  # Centrer le titre horizontalement
+        }
     )
 
     # Personnaliser l'apparence des polygones
