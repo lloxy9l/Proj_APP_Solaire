@@ -19,7 +19,9 @@ fig = go.Figure(data=go.Heatmap(
     text=heatmap_data.values,  # Add data values as text
     texttemplate="%{text:.2f}",  # Format text to show up to two decimal places
     colorscale='Viridis',
-    colorbar=dict(title="Consumption")
+    colorbar=dict(title="Consumption"),
+    zmin=0,  # Minimum value for the color scale
+    zmax=7000
 ))
 
 # Update layout for better visualization
