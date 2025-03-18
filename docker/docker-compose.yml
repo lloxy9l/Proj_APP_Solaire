@@ -12,7 +12,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - ./projet_solarx.sql:/docker-entrypoint-initdb.d/projet_solarx.sql
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
