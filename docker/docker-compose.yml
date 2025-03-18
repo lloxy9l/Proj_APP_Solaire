@@ -28,7 +28,7 @@ services:
       - "8080:80"
 
   python_app:
-    image: python:3.10
+    build: .
     container_name: python_env
     restart: always
     depends_on:
@@ -36,7 +36,5 @@ services:
     volumes:
       - ../dashboard_docker:/usr/src/app
     working_dir: /usr/src/app
-    command: >
-      sh -c "pip install dash dash-bootstrap-components plotly mysql-connector-python pandas && python dashboard.py"
     ports:
       - "8050:8050"
