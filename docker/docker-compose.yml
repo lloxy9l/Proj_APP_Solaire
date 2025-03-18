@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   db:
-    image: mysql:8.0
+    image: mysql:latest
     container_name: mysql_db
     restart: always
     environment:
@@ -10,10 +8,11 @@ services:
       MYSQL_DATABASE: projet_solarx
       MYSQL_USER: dev
       MYSQL_PASSWORD: password
+    command: --log-bin-trust-function-creators=1
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./mysql_data:/var/lib/mysql
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -38,6 +37,3 @@ services:
       - ./app:/usr/src/app
     working_dir: /usr/src/app
     command: ["tail", "-f", "/dev/null"]
-
-volumes:
-  mysql_data:
