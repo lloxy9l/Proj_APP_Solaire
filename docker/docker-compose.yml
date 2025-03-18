@@ -1,6 +1,6 @@
 services:
   db:
-    image: mysql:latest
+    build: ./mysql_image
     container_name: mysql_db
     restart: always
     environment:
@@ -11,8 +11,6 @@ services:
     command: --log-bin-trust-function-creators=1
     ports:
       - "3306:3306"
-    volumes:
-      - ./projet_solarx.sql:/docker-entrypoint-initdb.d/projet_solarx.sql
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -28,7 +26,7 @@ services:
       - "8080:80"
 
   python_app:
-    build: .
+    build: ./python_image
     container_name: python_env
     restart: always
     depends_on:
