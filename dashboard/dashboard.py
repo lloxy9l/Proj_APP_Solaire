@@ -36,7 +36,7 @@ def fetch_data():
     df = pd.DataFrame(data)
     df["date_collecte"] = pd.to_datetime(df["date_collecte"])
     df[["temperature", "irradiance", "precipitation", "ensoleillement"]] = df[["temperature", "irradiance", "precipitation", "ensoleillement"]].apply(pd.to_numeric, errors='coerce')
-    df["ensoleillement"] = df["ensoleillement"]*0.001
+    df["ensoleillement"] = df["ensoleillement"]/3600
     df["production"] = df["irradiance"] * 365 * 3
 
     conso_df = pd.DataFrame(data_conso)
@@ -63,7 +63,7 @@ commune_df = pd.DataFrame(data_commune)
 mean_data = df.groupby(["latitude", "longitude"]).mean().reset_index()
 global_means = {
     "temperature": df["temperature"].mean(),
-    "ensoleillement": df["ensoleillement"].mean()/3600,
+    "ensoleillement": df["ensoleillement"].mean(),
     "irradiance": df["irradiance"].mean(),
     "precipitation": df["precipitation"].mean(),
     "consommation":df_conso["consommation"].mean()/1000,
