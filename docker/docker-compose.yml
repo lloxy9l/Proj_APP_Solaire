@@ -34,6 +34,9 @@ services:
     depends_on:
       - db
     volumes:
-      - ./app:/usr/src/app
+      - ../dashboard_docker:/usr/src/app
     working_dir: /usr/src/app
-    command: ["tail", "-f", "/dev/null"]
+    command: >
+      sh -c "pip install dash dash-bootstrap-components plotly mysql-connector-python pandas && python dashboard.py"
+    ports:
+      - "8050:8050"
