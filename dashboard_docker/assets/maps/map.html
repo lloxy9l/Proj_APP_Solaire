@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte avec regroupement des points</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+    <style>
+        #map {
+            width: 100%;
+            height: 500px;  /* Ajustez la hauteur selon vos besoins */
+        }
+    </style>    
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // Créer la carte et définir le centre et le zoom initial
+        var map = L.map('map').setView([46.2044, 6.1432], 12);
+    
+        // Ajouter le calque de tuiles (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+    
+        // Créer un groupe pour les marqueurs
+        var markers = L.markerClusterGroup();
+    
+        // Fonction pour récupérer les points GPS depuis l'API
+        function fetchPoints() {
+            fetch('http://localhost:3000/getPoints')  // Remplacer par l'URL de votre API
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Données récupérées:', data);  // Vérifiez les données dans la console
+    
+                    // Boucle à travers les points GPS et ajoute un marqueur pour chaque point
+                    data.forEach(point => {
+                        var lat = point.latitude;
+                        var lon = point.longitude;
+                        var marker = L.marker([lat, lon]).bindPopup('<b>Point GPS</b><br>Latitude: ' + lat + '<br>Longitude: ' + lon);
+                        markers.addLayer(marker);
+                    });
+    
+                    // Ajouter les marqueurs au groupe de marqueurs
+                    map.addLayer(markers);
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la récupération des points:', error);
+                });
+        }
+    
+        // Appeler la fonction pour récupérer et afficher les points GPS
+        fetchPoints();
+    </script>
+    
+    
+
+</body>
+</html>

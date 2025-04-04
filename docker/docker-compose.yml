@@ -4,8 +4,6 @@ services:
     container_name: mysql_db
     restart: always
     command: --log-bin-trust-function-creators=1
-    ports:
-      - "3306:3306"
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -18,7 +16,7 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
       UPLOAD_LIMIT: 100M
     ports:
-      - "8080:80"
+      - "80:80"
 
   python_app:
     build: ./python_image
@@ -34,8 +32,10 @@ services:
       - "8050:8050"
 
   nodejs:
-    image: node
+    build: ./node_image
     container_name: nodejs
     restart: always
+    depends_on:
+      - db
     ports:
       - "3000:3000"
