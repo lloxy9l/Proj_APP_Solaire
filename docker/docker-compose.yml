@@ -3,11 +3,6 @@ services:
     build: ./mysql_image
     container_name: mysql_db
     restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: projet_solarx
-      MYSQL_USER: dev
-      MYSQL_PASSWORD: password
     command: --log-bin-trust-function-creators=1
     ports:
       - "3306:3306"
