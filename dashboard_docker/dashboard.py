@@ -143,6 +143,63 @@ def get_communes_data(df, geojson_data):
 # Chargement du fichier GeoJSON et des données communes
 geojson_data = load_geojson('geo_data_boundaries.geojson')
 df = get_data()
+
+# Étape 1 : Calculer la moyenne globale
+moyenne_globale_conso = df['consommation'].mean()
+print(f"Moyenne consommation globale (kWh): {moyenne_globale_conso:.2f}")
+
+# Étape 2 : Identifier les communes du GeoJSON
+geojson_communes = set(
+    feature['properties']['name'].strip().lower()
+    for feature in geojson_data['features']
+    if 'name' in feature['properties'] and feature['properties']['name']  # pour éviter les None ou vide
+)
+
+
+# Communes déjà présentes dans la BDD
+communes_bdd = set(df['nom_commune'].str.strip().str.lower())
+
+# Étape 3 : Détecter les communes manquantes
+communes_manquantes = geojson_communes - communes_bdd
+print(f"Communes sans consommation : {communes_manquantes}")
+
+# Étape 4 : Créer un DataFrame avec consommation = moyenne
+import pandas as pd
+
+communes_manquantes_df = pd.DataFrame({
+    'nom_commune': [commune.capitalize() for commune in communes_manquantes],
+    'consommation': moyenne_globale_conso,
+    'annee': 2023
+})
+
+# Fusionner les nouvelles communes avec celles de la BDD
+df = pd.concat([df, communes_manquantes_df], ignore_index=True)
+
+# Étape 5 : Mise à jour SQL (ajout des communes manquantes dans la BDD)
+import mysql.connector
+
+conn = mysql.connector.connect(
+    host="db",
+    user="root",
+    password="rootpassword",
+    database="projet_solarx"
+)
+cursor = conn.cursor()
+
+# Ajouter les communes manquantes à la BDD
+for _, row in communes_manquantes_df.iterrows():
+    cursor.execute("""
+        INSERT INTO 2026_solarx_consommation (nom_commune, consommation, annee)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE consommation = VALUES(consommation)
+    """, (row['nom_commune'], row['consommation'], row['annee']))
+
+conn.commit()
+cursor.close()
+conn.close()
+print(" Données manquantes ajoutées avec la moyenne globale.")
+
+
 communes_geo_data = get_communes_data(df, geojson_data)
 print("Data communed fetched")
 
