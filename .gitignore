@@ -7,3 +7,5 @@ __pycache__
 .cache.sqlite
 
 Geckodriver v0.35.0 macOS aarch64.tar.gz
+
+geneve.tiff
