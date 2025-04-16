@@ -13,8 +13,8 @@ user = "root"
 password = "rootpassword"
 database = "projet_solarx"
 
-with open('assets/maps/map.html', 'r') as file:
-    map_html = file.read()
+with open('assets/maps/map_precipitation.html', 'r') as file:
+    map_precipitation = file.read()
 
 
 ##########################################################################################################################################
@@ -1156,7 +1156,7 @@ precipitations_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                               html.Iframe(srcDoc=map_html, width='100%', height='800px')
+                               html.Iframe(srcDoc=map_precipitation, width='100%', height='800px')
                             ]
                         ),
                     ]
