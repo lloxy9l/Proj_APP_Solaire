@@ -13,6 +13,9 @@ user = "root"
 password = "rootpassword"
 database = "projet_solarx"
 
+with open('assets/maps/map_precipitation.html', 'r') as file:
+    map_precipitation = file.read()
+
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -1153,27 +1156,7 @@ precipitations_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                               dcc.Graph(
-                                    id="graph-1",
-                                    figure=px.scatter_mapbox(
-                                        mean_data,
-                                        title="Précipitation quotidienne moyenne en mm",
-                                        lat="latitude",
-                                        lon="longitude",
-                                        color="precipitation",  # Affichage basé sur la précipitation
-                                        color_continuous_scale=["#a9cce3", "#5499c7", "#2471a3", "#1f618d", "#243852"],  # Palette de couleurs
-                                        hover_data=["precipitation"],  # Infos affichées au survol
-                                        size=[200 for _ in range(len(mean_data))],
-                                        mapbox_style="carto-positron",
-                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ).update_layout(
-                                    title={
-                                        "font": {"size": 26,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-                                ),
-                                    style={"width":"100%", "height":"calc(100vh - 350px)",},
-                                )
+                               html.Iframe(srcDoc=map_precipitation, width='100%', height='800px')
                             ]
                         ),
                     ]
