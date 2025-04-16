@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte des Précipitations</title>
+    <title>Carte de la température</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
@@ -55,17 +55,17 @@
 </head>
 <body>
 
-    <h1>Carte des Précipitations</h1>
+    <h1>Température moyenne par jour</h1>
     <div id="map"></div>
     <div class="legend">
-        <strong>Légende (mm)</strong><br>
-        <i style="background:#deebf7"></i> 0 – 1<br>
-        <i style="background:#c6dbef"></i> 1 – 2<br>
-        <i style="background:#9ecae1"></i> 2 – 3<br>
-        <i style="background:#6baed6"></i> 3 – 4<br>
-        <i style="background:#3182bd"></i> 4 – 5<br>
-        <i style="background:#08519c"></i> 5 – 6+
-    </div>
+        <strong>Légende (°C)</strong><br>
+        <i style="background:#0d0887"></i> ≤ 7°C<br>
+        <i style="background:#5a2d99"></i> 7 – 8°C<br>
+        <i style="background:#9c4b96"></i> 8 – 9°C<br>
+        <i style="background:#d85a7b"></i> 9 – 10°C<br>
+        <i style="background:#f6b22e"></i> 10 – 11°C<br>
+        <i style="background:#fcd11c"></i> > 11°C
+    </div>    
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
@@ -76,34 +76,35 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        function getColor(precip) {
-            if (precip > 5) return "#08519c";
-            else if (precip > 4) return "#3182bd";
-            else if (precip > 3) return "#6baed6";
-            else if (precip > 2) return "#9ecae1";
-            else if (precip > 1) return "#c6dbef";
-            else return "#deebf7";
+        // Fonction pour obtenir la couleur basée sur la température
+        function getColor(temperature) {
+            if (temperature <= 7) return "#0d0887"; // Violet
+            else if (temperature <= 8) return "#5a2d99"; // Violet plus clair
+            else if (temperature <= 9) return "#9c4b96"; // Rose-violet
+            else if (temperature <= 10) return "#d85a7b"; // Rose chaud
+            else if (temperature <= 11) return "#f6b22e"; // Jaune-orangé
+            else return "#fcd11c"; // Jaune lumineux
         }
 
-        // Groupe de clusters avec custom iconCreateFunction
         const markers = L.markerClusterGroup({
             iconCreateFunction: function (cluster) {
                 const markers = cluster.getAllChildMarkers();
 
-                // Calcul de la moyenne de précipitation
+                // Calcul de la température moyenne dans le cluster
                 let sum = 0;
                 let count = 0;
                 markers.forEach(m => {
-                    let precip = m.options.precipitation;
-                    if (typeof precip === "number") {
-                        sum += precip;
+                    let temperature = m.options.temperature;
+                    if (typeof temperature === "number") {
+                        sum += temperature;
                         count++;
                     }
                 });
 
-                const avg = count > 0 ? (sum / count).toFixed(1) : 0;
-                const color = getColor(avg);
+                const avg = count > 0 ? (sum / count).toFixed(1) : 0; // Moyenne arrondie
+                const color = getColor(avg); // Couleur basée sur la température moyenne
 
+                // Retour de l'icône de cluster avec la température moyenne
                 return L.divIcon({
                     html: `<div style="
                         background-color:${color};
@@ -124,6 +125,7 @@
             }
         });
 
+        // Fonction pour récupérer les points de données
         function fetchPoints() {
             fetch('http://localhost:3000/getPoints')
                 .then(response => response.json())
@@ -131,20 +133,21 @@
                     data.forEach(point => {
                         const lat = point.latitude;
                         const lon = point.longitude;
-                        const precipitation = point.precipitation;
+                        const temperature = point.temperature;
 
                         const popupContent = `
                             <b>Point GPS</b><br>
                             Latitude : ${lat}<br>
                             Longitude : ${lon}<br>
-                            Précipitation : ${precipitation} mm
+                            Température : ${temperature} °C
                         `;
 
+                        // Création de chaque marqueur avec son icône personnalisée
                         const marker = L.marker([lat, lon], {
                             icon: L.divIcon({
                                 className: 'custom-icon',
                                 html: `<div style="
-                                    background:${getColor(precipitation)};
+                                    background:${getColor(temperature)};
                                     width: 20px;
                                     height: 20px;
                                     border-radius: 50%;
@@ -154,7 +157,7 @@
                                 iconSize: [20, 20],
                                 iconAnchor: [10, 10]
                             }),
-                            precipitation: precipitation // ajouter précipitation ici
+                            temperature: temperature
                         }).bindPopup(popupContent);
 
                         markers.addLayer(marker);
