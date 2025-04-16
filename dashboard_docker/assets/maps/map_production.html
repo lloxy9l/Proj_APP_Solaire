@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte des Précipitations</title>
+    <title>Carte de la Production</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
@@ -55,17 +55,17 @@
 </head>
 <body>
 
-    <h1>Carte des Précipitations</h1>
+    <h1>Carte de la Production</h1>
     <div id="map"></div>
     <div class="legend">
-        <strong>Légende (mm)</strong><br>
-        <i style="background:#deebf7"></i> 0 – 1<br>
-        <i style="background:#c6dbef"></i> 1 – 2<br>
-        <i style="background:#9ecae1"></i> 2 – 3<br>
-        <i style="background:#6baed6"></i> 3 – 4<br>
-        <i style="background:#3182bd"></i> 4 – 5<br>
-        <i style="background:#08519c"></i> 5 – 6+
-    </div>
+        <strong>Légende (kWh)</strong><br>
+        <i style="background:#006400"></i> 4000+<br>
+        <i style="background:#32CD32"></i> 3900 – 4000<br>
+        <i style="background:#FFFF00"></i> 3700 – 3900<br>
+        <i style="background:#FFA500"></i> 3500 – 3700<br>
+        <i style="background:#FF4500"></i> 3200 – 3500<br>
+        <i style="background:#FF0000"></i> < 3200<br>
+    </div>     
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
@@ -76,33 +76,39 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        function getColor(precip) {
-            if (precip > 5) return "#08519c";
-            else if (precip > 4) return "#3182bd";
-            else if (precip > 3) return "#6baed6";
-            else if (precip > 2) return "#9ecae1";
-            else if (precip > 1) return "#c6dbef";
-            else return "#deebf7";
+        // Fonction pour obtenir la couleur en fonction de la production
+        function getColor(production) {
+            if (production >= 4000) return "#006400";  // Vert pour la production élevée
+            else if (production >= 3900) return "#32CD32";  // Vert clair
+            else if (production >= 3700) return "#FFFF00";  // Jaune
+            else if (production >= 3500) return "#FFA500";  // Orange
+            else if (production >= 3200) return "#FF4500";  // Orange rougeâtre
+            else return "#FF0000";  // Rouge pour la production faible
         }
 
-        // Groupe de clusters avec custom iconCreateFunction
         const markers = L.markerClusterGroup({
             iconCreateFunction: function (cluster) {
                 const markers = cluster.getAllChildMarkers();
 
-                // Calcul de la moyenne de précipitation
+                // Calcul de la production moyenne dans le cluster
                 let sum = 0;
                 let count = 0;
                 markers.forEach(m => {
-                    let precip = m.options.precipitation;
-                    if (typeof precip === "number") {
-                        sum += precip;
+                    let production = m.options.production;
+                    if (typeof production === "number") {
+                        sum += production;
                         count++;
                     }
                 });
 
                 const avg = count > 0 ? (sum / count).toFixed(1) : 0;
                 const color = getColor(avg);
+
+                // Calculer la couleur du texte en fonction de la couleur du cercle
+                let textColor = "#FFFFFF";  // Par défaut, le texte est blanc
+                if (color === "#FFFF00") {  // Jaune
+                    textColor = "#000000";  // Si la couleur est jaune, changer le texte en noir
+                }
 
                 return L.divIcon({
                     html: `<div style="
@@ -113,7 +119,7 @@
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        color: white;
+                        color: ${textColor};
                         font-weight: bold;
                         border: 2px solid #fff;
                         box-shadow: 0 0 5px rgba(0,0,0,0.4);
@@ -124,27 +130,29 @@
             }
         });
 
+        // Fonction pour récupérer les points de production
         function fetchPoints() {
-            fetch('http://localhost:3000/getPoints')
+            fetch('http://localhost:3000/getPoints')  // Assurez-vous que votre API retourne les points de production
                 .then(response => response.json())
                 .then(data => {
                     data.forEach(point => {
                         const lat = point.latitude;
                         const lon = point.longitude;
-                        const precipitation = point.precipitation;
+                        const irradiance = point.irradiance;  // Récupérer la valeur d'irradiance
+                        const production = irradiance * 365 * 3;  // Calcul de la production
 
                         const popupContent = `
                             <b>Point GPS</b><br>
                             Latitude : ${lat}<br>
                             Longitude : ${lon}<br>
-                            Précipitation : ${precipitation} mm
+                            Production : ${production.toFixed(0)} kWh
                         `;
 
                         const marker = L.marker([lat, lon], {
                             icon: L.divIcon({
                                 className: 'custom-icon',
                                 html: `<div style="
-                                    background:${getColor(precipitation)};
+                                    background:${getColor(production)};
                                     width: 20px;
                                     height: 20px;
                                     border-radius: 50%;
@@ -154,7 +162,7 @@
                                 iconSize: [20, 20],
                                 iconAnchor: [10, 10]
                             }),
-                            precipitation: precipitation // ajouter précipitation ici
+                            production: production  // Ajouter la production calculée ici
                         }).bindPopup(popupContent);
 
                         markers.addLayer(marker);

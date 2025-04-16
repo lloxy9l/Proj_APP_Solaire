@@ -16,6 +16,15 @@ database = "projet_solarx"
 with open('assets/maps/map_precipitation.html', 'r') as file:
     map_precipitation = file.read()
 
+with open('assets/maps/map_ensoleillement.html', 'r') as file:
+    map_ensoleillement = file.read()
+
+with open('assets/maps/map_temperature.html', 'r') as file:
+    map_temperature = file.read()
+
+with open('assets/maps/map_production.html', 'r') as file:
+    map_production = file.read()
+
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -568,32 +577,7 @@ main_content = html.Div(
                 [
                     dbc.CardBody(
                         [
-                            dcc.Graph(
-                                id="graph-1",
-                                figure=px.scatter_mapbox(
-                                    mean_data,
-                                    title="Production d'electricité estimée en KWh",
-                                    lat="latitude",
-                                    lon="longitude",
-                                    color="production",  # Affichage basé sur la température moyenne
-                                    color_continuous_scale="RdYlGn",  # Palette de couleurs
-                                    hover_data=["production"],  # Infos affichées au survol
-                                    size=[1 for _ in range(len(mean_data))],
-                                    mapbox_style="carto-positron",
-                                    center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                ).update_layout(
-                                    title={
-                                        "text": "Production d'electricité estimée en KWh",
-                                        "font": {"size": 26,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-                                ),
-                                style={
-                                    "cursor": "url('assets/img/panneau.png') 4 12, crosshair",
-                                    "width": "100%",
-                                    "height": "calc(100vh - 350px)",
-                                },
-                            )
+                            html.Iframe(srcDoc=map_production, width='100%', height='800px')
                         ]
                     ),
                 ]
@@ -729,28 +713,7 @@ ensoleillement_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                               dcc.Graph(
-                                    id="v",
-                                    figure=px.scatter_mapbox(
-                                        mean_data,
-                                        title="Ensoleillement quotidien moyen en heures",
-                                        lat="latitude",
-                                        lon="longitude",
-                                        color="ensoleillement",  # Affichage basé sur l'ensoleillement
-                                        color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["ensoleillement"],  # Infos affichées au survol
-                                        size=[200 for _ in range(len(mean_data))],
-                                        mapbox_style="carto-positron",
-                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ).update_layout(
-                                    title={
-                                        "text": "Ensoleillement quotidien moyen en heures",
-                                        "font": {"size": 26,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-                                ),
-                                    style={"width":"100%", "height":"calc(100vh - 350px)",},
-                                )
+                               html.Iframe(srcDoc=map_ensoleillement, width='100%', height='800px')
                             ]
                         ),
                     ]
@@ -942,27 +905,7 @@ temperature_content = html.Div(
                     [
                         dbc.CardBody(
                             [
-                                dcc.Graph(
-                                    id="graph-1",
-                                    figure=px.scatter_mapbox(
-                                        mean_data,
-                                        title="Température quotidienne moyenne en °C",
-                                        lat="latitude",
-                                        lon="longitude",
-                                        color="temperature",  # Affichage basé sur la température moyenne
-                                        color_continuous_scale="Plasma",  # Palette de couleurs
-                                        hover_data=["temperature"],  # Infos affichées au survol
-                                        size=[200 for _ in range(len(mean_data))],
-                                        mapbox_style="carto-positron",
-                                        center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                    ).update_layout(
-                                    title={
-                                        "font": {"size": 26,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-                                ),
-                                    style={"width":"100%", "height":"calc(100vh - 350px)",},
-                                )
+                               html.Iframe(srcDoc=map_temperature, width='100%', height='800px')
                             ]
                         ),
                     ]
@@ -1870,7 +1813,7 @@ def update_map(clickData):
         color=consommation_values,  # Coloration par la consommation d'électricité
         color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
         mapbox_style="open-street-map",
-        zoom=9.3,
+        zoom=10,
         range_color=[0,7000],
         center={"lat": 46.1833, "lon": 6.0833}  # Centré sur Genève
     )

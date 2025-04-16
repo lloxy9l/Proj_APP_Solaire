@@ -49,15 +49,15 @@ app.get('/getPoints', (req, res) => {
 
   const query = `
   SELECT 
-      p.latitude, 
-      p.longitude,
-      AVG(m.temperature) AS temperature,
-      AVG(m.ensoleillement) AS ensoleillement,
-      AVG(m.irradiance) AS irradiance,
-      AVG(m.precipitation) AS precipitation
-    FROM 2026_solarx_pointsgps p
-    JOIN 2026_solarx_mesures m ON p.idpoint = m.idpoint
-    GROUP BY p.latitude, p.longitude
+    p.latitude, 
+    p.longitude,
+    ROUND(AVG(m.temperature), 2) AS temperature,
+    ROUND(AVG(m.ensoleillement), 2) AS ensoleillement,
+    ROUND(AVG(m.irradiance), 2) AS irradiance,
+    ROUND(AVG(m.precipitation), 2) AS precipitation
+  FROM 2026_solarx_pointsgps p
+  JOIN 2026_solarx_mesures m ON p.idpoint = m.idpoint
+  GROUP BY p.latitude, p.longitude
   `;
 
   db.query(query, (err, results) => {
