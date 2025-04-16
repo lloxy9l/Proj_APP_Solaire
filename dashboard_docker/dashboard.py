@@ -1402,52 +1402,37 @@ profile_content = html.Div(
                 "box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
             },
             children=[
-                # Título e imagem do usuário
                 html.Div(
                     style={"margin-top": "10px"},
                     children=[
                         html.Div(
-                            style={"display": "flex", "align-items": "center"},
+                            style={"display": "flex", "align-items": "center", "position": "relative"},
                             children=[
-                                # Imagem do usuário
+                                # Conteneur de l'image de profil
                                 html.Div(
                                     style={
                                         "position": "relative",
                                         "width": "120px",
                                         "height": "120px",
-                                        "border-radius": "50%",
-                                        "background-image": "url('assets/img/user_image.png')",
-                                        "background-size": "cover",
-                                        "background-position": "center",
-                                        "border": "3px solid white",
                                     },
                                     children=[
-                                        # Ícone de editar imagem
-                                        html.Div(
+                                        html.Img(
+                                            src="assets/img/user_img.webp",
                                             style={
-                                                "position": "absolute",
-                                                "bottom": "5px",
-                                                "right": "5px",
-                                                "background-color": "#005dff",
-                                                "border-radius": "50%",
-                                                "padding": "5px",
-                                                "background-image": "url('assets/svg/edit.svg')",
-                                            },
-                                            children=[
-                                                html.Img(
-                                                    src="assets/edit-icon.png",
-                                                    style={"width": "20px", "height": "20px"},
-                                                ),
-                                            ],
+                                                "width": "120px",
+                                                "height": "120px",
+                                                "border-radius":"50%",
+                                                "border": "3px solid white",
+                                            }
                                         ),
-                                    ],
+                                    ]
                                 ),
-                                # Nome e email do usuário
+                                # Infos utilisateur
                                 html.Div(
                                     style={"margin-left": "15px"},
                                     children=[
-                                        html.H3("User Name", style={"margin-bottom": "5px"}),
-                                        html.P("useremail@example.com", style={"color": "#888"}),
+                                        html.H3("Bercier Thomas", style={"margin-bottom": "5px"}),
+                                        html.P("bercierthomas@gmail.com", style={"color": "#888"}),
                                     ]
                                 ),
                             ]
@@ -1464,7 +1449,7 @@ profile_content = html.Div(
                             style={"display": "flex", "justify-content": "space-between"},
                             children=[
                                 html.Label("Name", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("Your Name", style={"margin-bottom": "15px", "margin-left": "10px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
+                                html.P("Bercier Thomas", style={"margin-bottom": "15px", "margin-left": "10px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
                             ]
                         ),
                         html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
@@ -1474,7 +1459,7 @@ profile_content = html.Div(
                             style={"display": "flex", "justify-content": "space-between"},
                             children=[
                                 html.Label("Email account", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("yourname@gmail.com", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
+                                html.P("bercierthomas@gmail.com", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
                             ]
                         ),
                         html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
@@ -1484,7 +1469,7 @@ profile_content = html.Div(
                             style={"display": "flex", "justify-content": "space-between"},
                             children=[
                                 html.Label("Mobile number", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("Add number", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
+                                html.P("0616021962", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
                             ]
                         ),
                         html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
@@ -1494,7 +1479,7 @@ profile_content = html.Div(
                             style={"display": "flex", "justify-content": "space-between"},
                             children=[
                                 html.Label("Location", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("USA", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
+                                html.P("FRANCE", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
                             ]
                         ),
                         html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
