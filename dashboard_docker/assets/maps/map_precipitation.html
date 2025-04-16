@@ -20,7 +20,6 @@
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
-
     <script>
         // Créer la carte et définir le centre et le zoom initial
         var map = L.map('map').setView([46.2044, 6.1432], 12);
@@ -35,16 +34,25 @@
     
         // Fonction pour récupérer les points GPS depuis l'API
         function fetchPoints() {
-            fetch('http://localhost:3000/getPoints')  // Remplacer par l'URL de votre API
+            fetch('http://localhost:3000/getPoints')
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Données récupérées:', data);  // Vérifiez les données dans la console
+                    console.log('Données récupérées:', data);
     
                     // Boucle à travers les points GPS et ajoute un marqueur pour chaque point
                     data.forEach(point => {
                         var lat = point.latitude;
                         var lon = point.longitude;
-                        var marker = L.marker([lat, lon]).bindPopup('<b>Point GPS</b><br>Latitude: ' + lat + '<br>Longitude: ' + lon);
+                        var precipitation = point.precipitation;
+    
+                        var popupContent = `
+                            <b>Point GPS</b><br>
+                            Latitude: ${lat}<br>
+                            Longitude: ${lon}<br>
+                            Précipitation: ${precipitation} mm
+                        `;
+    
+                        var marker = L.marker([lat, lon]).bindPopup(popupContent);
                         markers.addLayer(marker);
                     });
     
@@ -58,9 +66,6 @@
     
         // Appeler la fonction pour récupérer et afficher les points GPS
         fetchPoints();
-    </script>
-    
-    
-
+    </script>y
 </body>
 </html>

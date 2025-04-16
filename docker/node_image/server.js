@@ -41,23 +41,23 @@ function connectToDatabase() {
 // Connexion à la base de données au démarrage
 connectToDatabase();
 
-// Créer une route pour récupérer les points GPS
+// Endpoint pour récupérer les points avec les données météo
 app.get('/getPoints', (req, res) => {
   if (!db) {
     return res.status(500).json({ error: 'La connexion à la base de données n\'est pas encore établie.' });
   }
 
   const query = `
-    SELECT 
+  SELECT 
       p.latitude, 
       p.longitude,
-      d.temperature,
-      d.ensoleillement,
-      d.irradiance,
-      d.precipitation,
-      d.date_collecte
+      AVG(m.temperature) AS temperature,
+      AVG(m.ensoleillement) AS ensoleillement,
+      AVG(m.irradiance) AS irradiance,
+      AVG(m.precipitation) AS precipitation
     FROM 2026_solarx_pointsgps p
-    JOIN 2026_solarx_donnees d ON p.id = d.idpoint
+    JOIN 2026_solarx_mesures m ON p.idpoint = m.idpoint
+    GROUP BY p.latitude, p.longitude
   `;
 
   db.query(query, (err, results) => {
@@ -68,4 +68,9 @@ app.get('/getPoints', (req, res) => {
     }
     res.json(results);
   });
+});
+
+// 🔊 Démarrer le serveur
+app.listen(port, () => {
+  console.log(`🟢 Serveur démarré sur http://localhost:${port}`);
 });
