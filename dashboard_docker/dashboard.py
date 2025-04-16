@@ -22,6 +22,9 @@ with open('assets/maps/map_ensoleillement.html', 'r') as file:
 with open('assets/maps/map_temperature.html', 'r') as file:
     map_temperature = file.read()
 
+with open('assets/maps/map_production.html', 'r') as file:
+    map_production = file.read()
+
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -574,32 +577,7 @@ main_content = html.Div(
                 [
                     dbc.CardBody(
                         [
-                            dcc.Graph(
-                                id="graph-1",
-                                figure=px.scatter_mapbox(
-                                    mean_data,
-                                    title="Production d'electricité estimée en KWh",
-                                    lat="latitude",
-                                    lon="longitude",
-                                    color="production",  # Affichage basé sur la température moyenne
-                                    color_continuous_scale="RdYlGn",  # Palette de couleurs
-                                    hover_data=["production"],  # Infos affichées au survol
-                                    size=[1 for _ in range(len(mean_data))],
-                                    mapbox_style="carto-positron",
-                                    center=dict(lat=46.2047, lon=6.14231),  # Centrer sur Genève
-                                ).update_layout(
-                                    title={
-                                        "text": "Production d'electricité estimée en KWh",
-                                        "font": {"size": 26,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-                                ),
-                                style={
-                                    "cursor": "url('assets/img/panneau.png') 4 12, crosshair",
-                                    "width": "100%",
-                                    "height": "calc(100vh - 350px)",
-                                },
-                            )
+                            html.Iframe(srcDoc=map_production, width='100%', height='800px')
                         ]
                     ),
                 ]
