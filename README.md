@@ -1,5 +1,22 @@
 # Geneva Weather Data Collection
 
+## Lancez le projet:
+
+1. Ouvrez un terminal et placez-vous dans le dossier `docker` :
+   ```bash
+   cd docker
+   ```
+
+2. Lancez les services avec Docker :
+   ```bash
+   docker-compose up --build
+   ```
+
+3. Ouvrez le navigateur et accédez à :
+   ```
+   http://localhost:8050/home
+   ```
+   
 ## Introduction:
 
 Welcome to the Geneva Weather Data Collection project! This initiative focuses on gathering comprehensive weather data specifically tailored to the Geneva region. The project is essential for various applications such as urban planning, agriculture, and renewable energy projects. In this README, we'll outline the project's goals, data collection methods, and storage options.
