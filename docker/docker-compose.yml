@@ -4,13 +4,27 @@ services:
     container_name: mysql_db
     restart: always
     command: --log-bin-trust-function-creators=1
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: projet_solarx
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - db_data:/var/lib/mysql
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       PMA_HOST: db
       MYSQL_ROOT_PASSWORD: rootpassword
@@ -23,8 +37,10 @@ services:
     container_name: python_env
     restart: always
     depends_on:
-      - db
-      - nodejs
+      db:
+        condition: service_healthy
+      nodejs:
+        condition: service_started
     volumes:
       - ../dashboard_docker:/usr/src/app
     working_dir: /usr/src/app
@@ -36,6 +52,10 @@ services:
     container_name: nodejs
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "3000:3000"
+
+volumes:
+  db_data:
