@@ -61,7 +61,7 @@ class FastScannerGUI(tk.Tk):
     def _play_music(self):
         try:
             pygame.mixer.init()
-            pygame.mixer.music.load("startup.mp3")
+            pygame.mixer.music.load("deploiement-script/startup.mp3")
             pygame.mixer.music.play(-1)  # boucle infinie
         except Exception as e:
             print(f"Erreur musique : {e}")
