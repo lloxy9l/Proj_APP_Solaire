@@ -3,6 +3,8 @@ services:
     build: ./python_image
     container_name: python_env
     restart: always
+    environment:
+      DB_HOST: "${DB_HOST:-db}"
     volumes:
       - ../dashboard_docker:/usr/src/app
     working_dir: /usr/src/app

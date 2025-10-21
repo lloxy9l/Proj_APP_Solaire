@@ -3,6 +3,8 @@ services:
     build: ./node_image
     container_name: nodejs
     restart: always
+    environment:
+      DB_HOST: "${DB_HOST:-db}"
     ports:
       - "3000:3000"
 

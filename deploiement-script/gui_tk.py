@@ -55,6 +55,7 @@ class FastScannerGUI(tk.Tk):
             "nodejs": "docker-compose.node.yml",
         }
         self.current_container_plan = {}
+        self.db_host_ip = None
 
         self._build_ui()
 
@@ -414,6 +415,37 @@ class FastScannerGUI(tk.Tk):
 
         # Interface seulement : on affiche le choix des conteneurs et compose utilisés dans les logs.
         deployment_plan = {}
+        requires_db = any(
+            any(name in {"python_app", "nodejs"} for name in per_machine_containers.get(ip, []))
+            for ip in selected_ips
+        )
+
+        db_candidates = [ip for ip, containers in per_machine_containers.items() if "db" in containers]
+        db_host_ip = None
+        if requires_db:
+            if len(db_candidates) == 1:
+                db_host_ip = db_candidates[0]
+            elif len(db_candidates) > 1:
+                prompt = (
+                    "Plusieurs machines contiennent le conteneur DB.\n"
+                    f"Saisis l'adresse IP à utiliser pour DB_HOST parmi : {', '.join(db_candidates)}"
+                )
+                db_host_ip = simpledialog.askstring("Choix DB_HOST", prompt, parent=self)
+                if not db_host_ip:
+                    messagebox.showwarning("Annulé", "Aucune IP de base de données fournie.")
+                    return
+            else:
+                db_host_ip = simpledialog.askstring(
+                    "DB_HOST requis",
+                    "Aucune machine de ce déploiement n'héberge le conteneur DB.\n"
+                    "Indique l'adresse IP où MySQL est déjà disponible :",
+                    parent=self,
+                )
+                if not db_host_ip:
+                    messagebox.showwarning("Annulé", "Aucune IP de base de données fournie.")
+                    return
+
+        self.db_host_ip = db_host_ip
         self.log.insert(tk.END, "\nDéploiement demandé avec le plan suivant :\n")
         for ip in selected_ips:
             containers = per_machine_containers.get(ip, self.available_containers)
@@ -424,10 +456,14 @@ class FastScannerGUI(tk.Tk):
             ]
             if not compose_files:
                 compose_files = ["docker-compose.yml"]
-            deployment_plan[ip] = {"containers": containers, "compose_files": compose_files}
+            env_vars = {}
+            if db_host_ip and any(name in {"python_app", "nodejs"} for name in containers):
+                env_vars["DB_HOST"] = db_host_ip
+            deployment_plan[ip] = {"containers": containers, "compose_files": compose_files, "env": env_vars}
             labels = ", ".join(self._get_container_label(name) for name in containers)
             compose_hint = ", ".join(compose_files)
-            self.log.insert(tk.END, f" - {ip} : {labels} (compose: {compose_hint})\n")
+            env_hint = ", ".join(f"{k}={v}" for k, v in env_vars.items()) if env_vars else "pas de variables"
+            self.log.insert(tk.END, f" - {ip} : {labels} (compose: {compose_hint}, env: {env_hint})\n")
         self.log.see(tk.END)
         self.current_container_plan = deployment_plan
 
@@ -454,6 +490,7 @@ class FastScannerGUI(tk.Tk):
             plan = self.current_container_plan.get(ip, {})
             selected_containers = plan.get("containers", list(self.available_containers))
             compose_files = plan.get("compose_files", ["docker-compose.yml"])
+            env_vars = plan.get("env", {})
             files_display = ", ".join(compose_files)
             services_display = ", ".join(self._get_container_label(name) for name in selected_containers)
             print(
@@ -461,7 +498,7 @@ class FastScannerGUI(tk.Tk):
                 f"(services : {services_display or 'tous'}, fichiers : {files_display})"
             )
             try:
-                success = scanner.deploy_docker_compose(ip, user, pw, compose_files)
+                success = scanner.deploy_docker_compose(ip, user, pw, compose_files, extra_env=env_vars)
                 if success:
                     print(f"[{ip}] ✅ Déploiement réussi !\n")
                     return

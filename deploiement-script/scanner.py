@@ -8,6 +8,7 @@ via SSH (mot de passe), avec bash -lc pour charger l'environnement (PATH).
 """
 import ipaddress
 import subprocess
+import shlex
 import socket
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import getpass
@@ -60,6 +61,7 @@ def deploy_docker_compose(
     username: str,
     password: str,
     compose_files=None,
+    extra_env=None,
     timeout=10,
 ) -> bool:
     """
@@ -108,10 +110,20 @@ def deploy_docker_compose(
         compose_files = compose_files or ["docker-compose.yml"]
         print(f"📄 Fichiers ciblés : {', '.join(compose_files)}")
 
+        env_cmd = ""
+        if extra_env:
+            parts = []
+            for key, value in extra_env.items():
+                if value is None:
+                    continue
+                parts.append(f"{key}={shlex.quote(str(value))}")
+            if parts:
+                env_cmd = " ".join(parts) + " "
+
         for compose_file in compose_files:
             # Commande principale (docker compose v2)
             cmd_v2 = (
-                f'cd Proj_APP_Solaire/docker && docker compose -f {compose_file} up -d'
+                f'cd Proj_APP_Solaire/docker && {env_cmd}docker compose -f {compose_file} up -d'
             )
             print(f"\n▶️  Exécution : {cmd_v2}")
             rc, out, err = run(cmd_v2)
@@ -119,7 +131,7 @@ def deploy_docker_compose(
             # Fallback docker-compose (v1)
             if rc != 0:
                 cmd_v1 = (
-                    f'cd Proj_APP_Solaire/docker && docker-compose -f {compose_file} up -d'
+                    f'cd Proj_APP_Solaire/docker && {env_cmd}docker-compose -f {compose_file} up -d'
                 )
                 print(f"↩️  Fallback : {cmd_v1}")
                 rc, out2, err2 = run(cmd_v1)

@@ -17,7 +17,7 @@ function connectToDatabase() {
   operation.attempt((currentAttempt) => {
     // Créer une nouvelle connexion à la base de données
     db = mysql.createConnection({
-      host: 'db',  // Utiliser le nom du service Docker 'db'
+      host: process.env.DB_HOST || 'db',  // Permet de surcharger l'hôte via l'environnement
       user: 'root',
       password: 'rootpassword',
       database: 'projet_solarx',

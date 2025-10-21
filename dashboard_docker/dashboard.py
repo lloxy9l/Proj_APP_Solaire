@@ -1,4 +1,5 @@
 import json
+import os
 import dash
 from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
@@ -8,7 +9,7 @@ from datetime import datetime
 import mysql.connector
 import pandas as pd
 
-host = "db"
+host = os.environ.get("DB_HOST", "db")  # Allows deployment to override DB host/IP
 user = "root"
 password = "rootpassword"
 database = "projet_solarx"
@@ -191,7 +192,7 @@ df = pd.concat([df, communes_manquantes_df], ignore_index=True)
 import mysql.connector
 
 conn = mysql.connector.connect(
-    host="db",
+    host=host,
     user="root",
     password="rootpassword",
     database="projet_solarx"
