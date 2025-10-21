@@ -7,12 +7,19 @@
    cd docker
    ```
 
-2. Lancez les services avec Docker :
+2. Choisissez le fichier `docker-compose` adapté :
+   - `docker-compose.yml` : stack complète (DB + Node.js + Python + phpMyAdmin)
+   - `docker-compose.db.yml` : uniquement la base MySQL
+   - `docker-compose.node.yml` : base MySQL + backend Node.js
+   - `docker-compose.python.yml` : base MySQL + backend Node.js + application Python
+   - `docker-compose.phpmyadmin.yml` : base MySQL + phpMyAdmin
+
+3. Démarrez les services souhaités :
    ```bash
-   docker-compose up --build
+   docker compose -f <docker-compose.xxx.yml> up --build
    ```
 
-3. Ouvrez le navigateur et accédez à :
+4. Pour accéder au dashboard Python :
    ```
    http://localhost:8050/home
    ```

@@ -1,0 +1,10 @@
+services:
+  nodejs:
+    build: ./node_image
+    container_name: nodejs
+    restart: always
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
