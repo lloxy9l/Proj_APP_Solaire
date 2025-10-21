@@ -55,11 +55,18 @@ def resolve_hostname(ip: str) -> str:
 
 
 # ====== SSH / déploiement ======
-def deploy_docker_compose(ip: str, username: str, password: str, timeout=10) -> bool:
+def deploy_docker_compose(
+    ip: str,
+    username: str,
+    password: str,
+    compose_files=None,
+    timeout=10,
+) -> bool:
     """
     Connexion SSH (Paramiko) avec mot de passe, puis exécution :
-      cd Proj_APP_Solaire/docker && docker compose up -d
-    Fallback docker-compose si échec.
+      cd Proj_APP_Solaire/docker && docker compose -f <fichier> up -d
+    pour chaque fichier docker-compose fourni. Fallback docker-compose (v1) si échec.
+    :param compose_files: liste optionnelle des fichiers docker-compose à exécuter.
     """
     try:
         import paramiko
@@ -98,29 +105,38 @@ def deploy_docker_compose(ip: str, username: str, password: str, timeout=10) -> 
             return False
         print(f"✅ Docker détecté : {docker_path}")
 
-        # Commande principale
-        cmd_v2 = 'cd Proj_APP_Solaire/docker && docker compose up -d'
-        print(f"\n▶️  Exécution : {cmd_v2}")
-        rc, out, err = run(cmd_v2)
+        compose_files = compose_files or ["docker-compose.yml"]
+        print(f"📄 Fichiers ciblés : {', '.join(compose_files)}")
 
-        # Fallback docker-compose
-        if rc != 0:
-            cmd_v1 = 'git clone https://github.com/lloxy9l/Proj_APP_Solaire.git && cd Proj_APP_Solaire/docker && docker-compose up -d'
-            rc, out2, err2 = run(cmd_v1)
-            out += "\n" + out2
-            err += "\n" + err2
+        for compose_file in compose_files:
+            # Commande principale (docker compose v2)
+            cmd_v2 = (
+                f'cd Proj_APP_Solaire/docker && docker compose -f {compose_file} up -d'
+            )
+            print(f"\n▶️  Exécution : {cmd_v2}")
+            rc, out, err = run(cmd_v2)
 
-        if out.strip():
-            print("\n=== Sortie ===\n" + out)
-        if err.strip():
-            print("\n=== Erreurs ===\n" + err)
+            # Fallback docker-compose (v1)
+            if rc != 0:
+                cmd_v1 = (
+                    f'cd Proj_APP_Solaire/docker && docker-compose -f {compose_file} up -d'
+                )
+                print(f"↩️  Fallback : {cmd_v1}")
+                rc, out2, err2 = run(cmd_v1)
+                out += "\n" + out2
+                err += "\n" + err2
 
-        if rc == 0:
-            print(f"✅ Déploiement réussi sur {ip}")
-            return True
-        else:
-            print(f"❌ Échec du déploiement (code {rc}).")
-            return False
+            if out.strip():
+                print("\n=== Sortie ===\n" + out)
+            if err.strip():
+                print("\n=== Erreurs ===\n" + err)
+
+            if rc != 0:
+                print(f"❌ Échec du déploiement via {compose_file} (code {rc}).")
+                return False
+
+        print(f"✅ Déploiement réussi sur {ip}")
+        return True
     finally:
         client.close()
 

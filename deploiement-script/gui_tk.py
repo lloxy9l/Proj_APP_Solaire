@@ -43,12 +43,16 @@ class FastScannerGUI(tk.Tk):
         self._scan_thread = None
         self.checked = set()
         self.all_hosts = []  # liste de tous les hôtes pour la recherche
-        self.available_containers = ["db", "phpmyadmin", "python_app", "nodejs"]
+        self.available_containers = ["db", "python_app", "nodejs"]
         self.container_labels = {
-            "db": "MySQL Database",
-            "phpmyadmin": "phpMyAdmin",
-            "python_app": "Python App",
-            "nodejs": "Node.js Service",
+            "db": "Base de données MySQL",
+            "python_app": "Application Python",
+            "nodejs": "Service Node.js",
+        }
+        self.container_compose_files = {
+            "db": "docker-compose.db.yml",
+            "python_app": "docker-compose.python.yml",
+            "nodejs": "docker-compose.node.yml",
         }
         self.current_container_plan = {}
 
@@ -408,14 +412,24 @@ class FastScannerGUI(tk.Tk):
                 return
             ip_credentials[ip] = (user, pw)
 
-        # Interface seulement : on affiche le choix des conteneurs dans les logs pour donner un feedback visuel.
-        self.current_container_plan = per_machine_containers
+        # Interface seulement : on affiche le choix des conteneurs et compose utilisés dans les logs.
+        deployment_plan = {}
         self.log.insert(tk.END, "\nDéploiement demandé avec le plan suivant :\n")
         for ip in selected_ips:
             containers = per_machine_containers.get(ip, self.available_containers)
+            compose_files = [
+                self.container_compose_files[name]
+                for name in containers
+                if name in self.container_compose_files
+            ]
+            if not compose_files:
+                compose_files = ["docker-compose.yml"]
+            deployment_plan[ip] = {"containers": containers, "compose_files": compose_files}
             labels = ", ".join(self._get_container_label(name) for name in containers)
-            self.log.insert(tk.END, f" - {ip} : {labels}\n")
+            compose_hint = ", ".join(compose_files)
+            self.log.insert(tk.END, f" - {ip} : {labels} (compose: {compose_hint})\n")
         self.log.see(tk.END)
+        self.current_container_plan = deployment_plan
 
         threading.Thread(target=self._deploy_multi_individual, args=(ip_credentials,), daemon=True).start()
 
@@ -437,9 +451,17 @@ class FastScannerGUI(tk.Tk):
 
     def _deploy_one(self, ip, user, pw):
         for attempt in range(1, MAX_DEPLOY_RETRIES + 1):
-            print(f"[{ip}] Tentative {attempt}/{MAX_DEPLOY_RETRIES} : docker compose up -d")
+            plan = self.current_container_plan.get(ip, {})
+            selected_containers = plan.get("containers", list(self.available_containers))
+            compose_files = plan.get("compose_files", ["docker-compose.yml"])
+            files_display = ", ".join(compose_files)
+            services_display = ", ".join(self._get_container_label(name) for name in selected_containers)
+            print(
+                f"[{ip}] Tentative {attempt}/{MAX_DEPLOY_RETRIES} : docker compose up -d "
+                f"(services : {services_display or 'tous'}, fichiers : {files_display})"
+            )
             try:
-                success = scanner.deploy_docker_compose(ip, user, pw)
+                success = scanner.deploy_docker_compose(ip, user, pw, compose_files)
                 if success:
                     print(f"[{ip}] ✅ Déploiement réussi !\n")
                     return
