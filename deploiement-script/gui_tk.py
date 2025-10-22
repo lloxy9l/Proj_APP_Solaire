@@ -56,6 +56,7 @@ class FastScannerGUI(tk.Tk):
         }
         self.current_container_plan = {}
         self.db_host_ip = None
+        self.node_host_ip = None
 
         self._build_ui()
 
@@ -419,9 +420,15 @@ class FastScannerGUI(tk.Tk):
             any(name in {"python_app", "nodejs"} for name in per_machine_containers.get(ip, []))
             for ip in selected_ips
         )
+        requires_node = any(
+            any(name in {"python_app"} for name in per_machine_containers.get(ip, []))
+            for ip in selected_ips
+        )
 
         db_candidates = [ip for ip, containers in per_machine_containers.items() if "db" in containers]
+        node_candidates = [ip for ip, containers in per_machine_containers.items() if "nodejs" in containers]
         db_host_ip = None
+        node_host_ip = None
         if requires_db:
             if len(db_candidates) == 1:
                 db_host_ip = db_candidates[0]
@@ -444,8 +451,31 @@ class FastScannerGUI(tk.Tk):
                 if not db_host_ip:
                     messagebox.showwarning("Annulé", "Aucune IP de base de données fournie.")
                     return
+        if requires_node:
+            if len(node_candidates) == 1:
+                node_host_ip = node_candidates[0]
+            elif len(node_candidates) > 1:
+                prompt = (
+                    "Plusieurs machines contiennent le conteneur Node.js.\n"
+                    f"Saisis l'adresse IP à utiliser pour NODE_HOST parmi : {', '.join(node_candidates)}"
+                )
+                node_host_ip = simpledialog.askstring("Choix NODE_HOST", prompt, parent=self)
+                if not node_host_ip:
+                    messagebox.showwarning("Annulé", "Aucune IP Node.js fournie.")
+                    return
+            else:
+                node_host_ip = simpledialog.askstring(
+                    "NODE_HOST requis",
+                    "Aucune machine de ce déploiement n'héberge le conteneur Node.js.\n"
+                    "Indique l'adresse IP où le service Node.js est déjà disponible :",
+                    parent=self,
+                )
+                if not node_host_ip:
+                    messagebox.showwarning("Annulé", "Aucune IP Node.js fournie.")
+                    return
 
         self.db_host_ip = db_host_ip
+        self.node_host_ip = node_host_ip
         self.log.insert(tk.END, "\nDéploiement demandé avec le plan suivant :\n")
         for ip in selected_ips:
             containers = per_machine_containers.get(ip, self.available_containers)
@@ -459,6 +489,8 @@ class FastScannerGUI(tk.Tk):
             env_vars = {}
             if db_host_ip and any(name in {"python_app", "nodejs"} for name in containers):
                 env_vars["DB_HOST"] = db_host_ip
+            if node_host_ip and any(name in {"python_app"} for name in containers):
+                env_vars["NODE_HOST"] = node_host_ip
             deployment_plan[ip] = {"containers": containers, "compose_files": compose_files, "env": env_vars}
             labels = ", ".join(self._get_container_label(name) for name in containers)
             compose_hint = ", ".join(compose_files)

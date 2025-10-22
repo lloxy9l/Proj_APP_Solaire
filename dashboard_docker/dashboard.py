@@ -10,21 +10,24 @@ import mysql.connector
 import pandas as pd
 
 host = os.environ.get("DB_HOST", "db")  # Allows deployment to override DB host/IP
+node_host = os.environ.get("NODE_HOST", "localhost")
+node_port = os.environ.get("NODE_PORT", "3000")
+node_base_url = f"http://{node_host}:{node_port}"
 user = "root"
 password = "rootpassword"
 database = "projet_solarx"
 
 with open('assets/maps/map_precipitation.html', 'r') as file:
-    map_precipitation = file.read()
+    map_precipitation = file.read().replace("http://localhost:3000", node_base_url)
 
 with open('assets/maps/map_ensoleillement.html', 'r') as file:
-    map_ensoleillement = file.read()
+    map_ensoleillement = file.read().replace("http://localhost:3000", node_base_url)
 
 with open('assets/maps/map_temperature.html', 'r') as file:
-    map_temperature = file.read()
+    map_temperature = file.read().replace("http://localhost:3000", node_base_url)
 
 with open('assets/maps/map_production.html', 'r') as file:
-    map_production = file.read()
+    map_production = file.read().replace("http://localhost:3000", node_base_url)
 
 
 ##########################################################################################################################################

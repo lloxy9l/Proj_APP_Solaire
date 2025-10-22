@@ -5,6 +5,8 @@ services:
     restart: always
     environment:
       DB_HOST: "${DB_HOST:-db}"
+      NODE_HOST: "${NODE_HOST:-localhost}"
+      NODE_PORT: "${NODE_PORT:-3000}"
     volumes:
       - ../dashboard_docker:/usr/src/app
     working_dir: /usr/src/app
