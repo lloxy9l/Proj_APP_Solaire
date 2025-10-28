@@ -1,0 +1,41 @@
+services:
+  db:
+    build: ./mysql_image
+    container_name: mysql_db
+    restart: always
+    command: --log-bin-trust-function-creators=1
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: rootpassword
+      UPLOAD_LIMIT: 100M
+    ports:
+      - "80:80"
+
+  python_app:
+    build: ./python_image
+    container_name: python_env
+    restart: always
+    depends_on:
+      - db
+      - nodejs
+    volumes:
+      - ../dashboard_docker:/usr/src/app
+    working_dir: /usr/src/app
+    ports:
+      - "8050:8050"
+
+  nodejs:
+    build: ./node_image
+    container_name: nodejs
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
