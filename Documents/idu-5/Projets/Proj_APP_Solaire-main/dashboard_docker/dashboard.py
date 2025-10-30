@@ -47,7 +47,7 @@ with open('assets/maps/map_zones_industrielles.html', 'r') as file:
 ######################              Recuperation données bdd pour carte meteo                            #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
-from ia_prediction import predict_future_production_ai
+
 # Appliquer le modèle IA
 
 
@@ -88,36 +88,38 @@ import numpy as np
 
 
 
-def predict_future_production(df):
-    """
-    Calcule la production solaire actuelle et la prédiction pour 2035
-    en utilisant les tendances climatiques.
-    """
-    # Hypothèses de tendance climatique (à ajuster)
-    taux_croissance_irradiance = 0.018  # +1.8% par an
-    taux_baisse_precip = 0.007          # -0.7% par an
-    nb_annees = 10                      # projection sur 10 ans (2025 → 2035)
+# def predict_future_production(df):
+#     """
+#     Calcule la production solaire actuelle et la prédiction pour 2035
+#     en utilisant les tendances climatiques.
+#     """
+#     # Hypothèses de tendance climatique (à ajuster)
+#     taux_croissance_irradiance = 0.018  # +1.8% par an
+#     taux_baisse_precip = 0.007          # -0.7% par an
+#     nb_annees = 10                      # projection sur 10 ans (2025 → 2035)
 
-    # 🔸 Production actuelle (estimation simple basée sur irradiance et précipitations)
-    df["production_actuelle"] = df["irradiance"] * (365 - df["precipitation"] / 10) * 3
+#     # 🔸 Production actuelle (estimation simple basée sur irradiance et précipitations)
+#     df["production_actuelle"] = df["irradiance"] * (365 - df["precipitation"] / 10) * 3
 
-    # 🔸 Production prédite 2035 : croissance irradiance / baisse précipitations
-    df["production_2035"] = df["production_actuelle"] * (
-        1 + (taux_croissance_irradiance * nb_annees) - (taux_baisse_precip * nb_annees / 2)
-    )
+#     # 🔸 Production prédite 2035 : croissance irradiance / baisse précipitations
+#     df["production_2035"] = df["production_actuelle"] * (
+#         1 + (taux_croissance_irradiance * nb_annees) - (taux_baisse_precip * nb_annees / 2)
+#     )
 
-    # 🔸 Variation entre 2025 et 2035 (%)
-    df["variation_percent"] = ((df["production_2035"] - df["production_actuelle"])
-                               / df["production_actuelle"]) * 100
+#     # 🔸 Variation entre 2025 et 2035 (%)
+#     df["variation_percent"] = ((df["production_2035"] - df["production_actuelle"])
+#                                / df["production_actuelle"]) * 100
 
-    # Nettoyage et arrondis
-    df["production_actuelle"] = df["production_actuelle"].round(2)
-    df["production_2035"] = df["production_2035"].round(2)
-    df["variation_percent"] = df["variation_percent"].round(2)
+#     # Nettoyage et arrondis
+#     df["production_actuelle"] = df["production_actuelle"].round(2)
+#     df["production_2035"] = df["production_2035"].round(2)
+#     df["variation_percent"] = df["variation_percent"].round(2)
 
-    return df
+#     return df
+from ia_prediction import predict_future_production
 
-
+df, df_conso, data_point = fetch_data()
+df = predict_future_production(df)
 
 
 ##########################################################################################################################################
