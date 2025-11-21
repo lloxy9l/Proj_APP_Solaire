@@ -1,0 +1,58 @@
+/* Ajoutez ces styles à la fin de votre fichier CSS */
+
+@media only screen and (max-width: 1024px) {
+
+    body {
+        display: block;
+        overflow-y: auto;
+    }
+
+    a{
+        outline: none;
+    }
+
+    aside{
+        position: absolute;
+        width: 100%;
+        left: -100%;
+        transition: left 250ms ease;
+        height: 100vh;
+    }
+
+    main {
+        padding: 10px; /* Réduire les marges */
+    }
+
+    #change_settings{
+        display: block;
+    }
+
+    #change_settings ion-icon{
+        display: block;
+        font-size: 20px;
+        margin-left: 12px;
+        color: rgb(51, 51, 51, 0.8);
+        cursor: pointer;
+ 
+    }
+
+}
+
+@media only screen and (max-width: 850px){
+    #searchbar{
+        display: none;
+    }
+
+    .icon_search_responsive{
+        display: block;
+        font-size: 20px;
+        margin-left: 12px;
+        color: rgb(51, 51, 51, 0.8);
+        cursor: pointer;
+    }
+
+    #stats, #graphs, #data_stats{
+        display: flex;
+        flex-direction: column;
+    }
+}

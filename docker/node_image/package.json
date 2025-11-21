@@ -1,0 +1,16 @@
+{
+    "name": "node",
+    "version": "0.0.1",
+    "description": "Serveur Node.js pour récupérer les points GPS",
+    "main": "server.js",
+    "dependencies": {
+      "express": "^4.17.1",
+      "mysql2": "^2.2.5",
+      "cors": "^2.8.5",
+      "retry": "^0.13.1"
+    },
+    "scripts": {
+      "start": "node server.js"
+    }
+  }
+  

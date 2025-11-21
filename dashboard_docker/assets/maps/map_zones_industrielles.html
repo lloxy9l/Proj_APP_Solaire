@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zones Industrielles - Potentiel Solaire</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9f9f9;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+
+    h1 {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 22px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* ======== Barre de recherche améliorée ======== */
+    #searchBox {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border-radius: 50px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      padding: 8px 18px;
+      z-index: 1000;
+      transition: all 0.3s ease;
+      width: 380px;
+    }
+
+    #searchBox:hover {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      transform: translateX(-50%) scale(1.02);
+    }
+
+    #searchBox input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      padding: 8px 10px;
+      background: transparent;
+    }
+
+    #searchBox button {
+      background: linear-gradient(135deg, #007bff, #0056d6);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    #searchBox button:hover {
+      background: linear-gradient(135deg, #0056d6, #003f9e);
+      transform: rotate(10deg);
+    }
+
+    .legend {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      font-size: 18px;
+      line-height: 26px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+      z-index: 1000;
+    }
+
+    .legend i {
+      width: 24px;
+      height: 18px;
+      float: left;
+      margin-right: 12px;
+      opacity: 0.9;
+      border: 1px solid #555;
+      border-radius: 4px;
+    }
+
+    /* Icône de loupe */
+    .search-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Zones Industrielles - Potentiel Solaire</h1>
+
+  <!-- Barre de recherche élégante -->
+  <div id="searchBox">
+    <img src="https://cdn-icons-png.flaticon.com/512/622/622669.png" class="search-icon" alt="Search">
+    <input type="text" id="regionInput" placeholder="Rechercher une région (ex : Lyon, Paris, Genève)...">
+    <button id="searchBtn">
+      🔍
+    </button>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="legend">
+    <strong>Légende</strong><br>
+    <i style="background:#2ecc71"></i> Adaptée<br>
+    <i style="background:#f39c12"></i> Moyenne<br>
+    <i style="background:#e74c3c"></i> Non adaptée
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const map = L.map('map').setView([46.2044, 6.1432], 9);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    function getColor(level) {
+      if (level === "Adaptée") return "#2ecc71"; 
+      if (level === "Moyenne") return "#f39c12"; 
+      return "#e74c3c";
+    }
+
+    const markers = L.markerClusterGroup({
+      iconCreateFunction: function (cluster) {
+        const zones = cluster.getAllChildMarkers();
+        let adapte = zones.filter(z => z.options.niveau === "Adaptée").length;
+        const ratio = zones.length > 0 ? Math.round((adapte / zones.length) * 100) : 0;
+        const color = ratio > 66 ? "#2ecc71" : (ratio > 33 ? "#f39c12" : "#e74c3c");
+
+        return L.divIcon({
+          html: `<div style="
+            background-color:${color};
+            border-radius:50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            border: 2px solid #fff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.4);
+          ">${ratio}%</div>`,
+          className: 'cluster-icon',
+          iconSize: [50, 50]
+        });
+      }
+    });
+
+    function loadZones() {
+      fetch('assets/maps/zones_industrielles.json')
+        .then(r => r.json())
+        .then(data => {
+          markers.clearLayers();
+          data.forEach(zone => {
+            const popup = `
+              <b>${zone.name}</b><br>
+              🏙️ Ville : ${zone.ville}<br>
+              📐 Surface : ${zone.surface_m2.toFixed(0)} m²<br>
+              ⚡ Production : ${zone.production_potentielle.toFixed(1)} MWh/an<br>
+              🔍 Niveau : <b>${zone.niveau_adaptabilite}</b>
+            `;
+
+            const marker = L.marker([zone.latitude, zone.longitude], {
+              icon: L.divIcon({
+                className: 'custom-icon',
+                html: `<div style="
+                    background:${getColor(zone.niveau_adaptabilite)};
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    border: 2px solid #fff;
+                    box-shadow: 0 0 3px rgba(0,0,0,0.5);
+                "></div>`,
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
+              }),
+              niveau: zone.niveau_adaptabilite
+            }).bindPopup(popup);
+
+            markers.addLayer(marker);
+          });
+          map.addLayer(markers);
+          map.fitBounds(markers.getBounds());
+        })
+        .catch(err => console.error("Erreur de chargement :", err));
+    }
+
+    loadZones();
+
+    // Recherche dynamique avec appel backend
+    document.getElementById("searchBtn").addEventListener("click", () => {
+      const region = document.getElementById("regionInput").value.trim();
+      if (!region) return alert("Veuillez entrer une région !");
+      
+      fetch("http://localhost:8050/updateRegion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ region })
+      })
+      .then(r => r.json())
+      .then(resp => {
+        alert(resp.message);
+        if (resp.status === "ok") loadZones();
+      })
+      .catch(err => console.error("Erreur recherche région :", err));
+    });
+  </script>
+</body>
+</html>

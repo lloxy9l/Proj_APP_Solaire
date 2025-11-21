@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte de la température</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        h1 {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 22px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 20px; /* Encore plus grand */
+            line-height: 28px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .legend i {
+            width: 30px;   /* plus large */
+            height: 18px;  /* plus haut */
+            float: left;
+            margin-right: 12px;
+            opacity: 0.9;
+            border: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Température moyenne par jour</h1>
+    <div id="map"></div>
+    <div class="legend">
+        <strong>Légende (°C)</strong><br>
+        <i style="background:#0d0887"></i> ≤ 7°C<br>
+        <i style="background:#5a2d99"></i> 7 – 8°C<br>
+        <i style="background:#9c4b96"></i> 8 – 9°C<br>
+        <i style="background:#d85a7b"></i> 9 – 10°C<br>
+        <i style="background:#f6b22e"></i> 10 – 11°C<br>
+        <i style="background:#fcd11c"></i> > 11°C
+    </div>    
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+    <script>
+        const map = L.map('map').setView([46.2044, 6.1432], 9);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Fonction pour obtenir la couleur basée sur la température
+        function getColor(temperature) {
+            if (temperature <= 7) return "#0d0887"; // Violet
+            else if (temperature <= 8) return "#5a2d99"; // Violet plus clair
+            else if (temperature <= 9) return "#9c4b96"; // Rose-violet
+            else if (temperature <= 10) return "#d85a7b"; // Rose chaud
+            else if (temperature <= 11) return "#f6b22e"; // Jaune-orangé
+            else return "#fcd11c"; // Jaune lumineux
+        }
+
+        const markers = L.markerClusterGroup({
+            iconCreateFunction: function (cluster) {
+                const markers = cluster.getAllChildMarkers();
+
+                // Calcul de la température moyenne dans le cluster
+                let sum = 0;
+                let count = 0;
+                markers.forEach(m => {
+                    let temperature = m.options.temperature;
+                    if (typeof temperature === "number") {
+                        sum += temperature;
+                        count++;
+                    }
+                });
+
+                const avg = count > 0 ? (sum / count).toFixed(1) : 0; // Moyenne arrondie
+                const color = getColor(avg); // Couleur basée sur la température moyenne
+
+                // Retour de l'icône de cluster avec la température moyenne
+                return L.divIcon({
+                    html: `<div style="
+                        background-color:${color};
+                        border-radius:50%;
+                        width: 40px;
+                        height: 40px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        border: 2px solid #fff;
+                        box-shadow: 0 0 5px rgba(0,0,0,0.4);
+                    ">${avg}</div>`,
+                    className: 'cluster-icon',
+                    iconSize: [40, 40]
+                });
+            }
+        });
+
+        // Fonction pour récupérer les points de données
+        function fetchPoints() {
+            fetch('http://localhost:3000/getPoints')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(point => {
+                        const lat = point.latitude;
+                        const lon = point.longitude;
+                        const temperature = point.temperature;
+
+                        const popupContent = `
+                            <b>Point GPS</b><br>
+                            Latitude : ${lat}<br>
+                            Longitude : ${lon}<br>
+                            Température : ${temperature} °C
+                        `;
+
+                        // Création de chaque marqueur avec son icône personnalisée
+                        const marker = L.marker([lat, lon], {
+                            icon: L.divIcon({
+                                className: 'custom-icon',
+                                html: `<div style="
+                                    background:${getColor(temperature)};
+                                    width: 20px;
+                                    height: 20px;
+                                    border-radius: 50%;
+                                    border: 2px solid #fff;
+                                    box-shadow: 0 0 3px rgba(0,0,0,0.5);
+                                "></div>`,
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            }),
+                            temperature: temperature
+                        }).bindPopup(popupContent);
+
+                        markers.addLayer(marker);
+                    });
+
+                    map.addLayer(markers);
+                })
+                .catch(error => {
+                    console.error("Erreur lors de la récupération des points :", error);
+                });
+        }
+
+        fetchPoints();
+    </script>
+</body>
+</html>
