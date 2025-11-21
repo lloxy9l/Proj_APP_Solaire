@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte des Précipitations</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        h1 {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 22px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 20px; /* Encore plus grand */
+            line-height: 28px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .legend i {
+            width: 30px;   /* plus large */
+            height: 18px;  /* plus haut */
+            float: left;
+            margin-right: 12px;
+            opacity: 0.9;
+            border: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Carte des Précipitations</h1>
+    <div id="map"></div>
+    <div class="legend">
+        <strong>Légende (mm)</strong><br>
+        <i style="background:#deebf7"></i> 0 – 1<br>
+        <i style="background:#c6dbef"></i> 1 – 2<br>
+        <i style="background:#9ecae1"></i> 2 – 3<br>
+        <i style="background:#6baed6"></i> 3 – 4<br>
+        <i style="background:#3182bd"></i> 4 – 5<br>
+        <i style="background:#08519c"></i> 5 – 6+
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+    <script>
+        const map = L.map('map').setView([46.2044, 6.1432], 9);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        function getColor(precip) {
+            if (precip > 5) return "#08519c";
+            else if (precip > 4) return "#3182bd";
+            else if (precip > 3) return "#6baed6";
+            else if (precip > 2) return "#9ecae1";
+            else if (precip > 1) return "#c6dbef";
+            else return "#deebf7";
+        }
+
+        // Groupe de clusters avec custom iconCreateFunction
+        const markers = L.markerClusterGroup({
+            iconCreateFunction: function (cluster) {
+                const markers = cluster.getAllChildMarkers();
+
+                // Calcul de la moyenne de précipitation
+                let sum = 0;
+                let count = 0;
+                markers.forEach(m => {
+                    let precip = m.options.precipitation;
+                    if (typeof precip === "number") {
+                        sum += precip;
+                        count++;
+                    }
+                });
+
+                const avg = count > 0 ? (sum / count).toFixed(1) : 0;
+                const color = getColor(avg);
+
+                return L.divIcon({
+                    html: `<div style="
+                        background-color:${color};
+                        border-radius:50%;
+                        width: 40px;
+                        height: 40px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        border: 2px solid #fff;
+                        box-shadow: 0 0 5px rgba(0,0,0,0.4);
+                    ">${avg}</div>`,
+                    className: 'cluster-icon',
+                    iconSize: [40, 40]
+                });
+            }
+        });
+
+        function fetchPoints() {
+            fetch('http://localhost:3000/getPoints')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(point => {
+                        const lat = point.latitude;
+                        const lon = point.longitude;
+                        const precipitation = point.precipitation;
+
+                        const popupContent = `
+                            <b>Point GPS</b><br>
+                            Latitude : ${lat}<br>
+                            Longitude : ${lon}<br>
+                            Précipitation : ${precipitation} mm
+                        `;
+
+                        const marker = L.marker([lat, lon], {
+                            icon: L.divIcon({
+                                className: 'custom-icon',
+                                html: `<div style="
+                                    background:${getColor(precipitation)};
+                                    width: 20px;
+                                    height: 20px;
+                                    border-radius: 50%;
+                                    border: 2px solid #fff;
+                                    box-shadow: 0 0 3px rgba(0,0,0,0.5);
+                                "></div>`,
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            }),
+                            precipitation: precipitation // ajouter précipitation ici
+                        }).bindPopup(popupContent);
+
+                        markers.addLayer(marker);
+                    });
+
+                    map.addLayer(markers);
+                })
+                .catch(error => {
+                    console.error("Erreur lors de la récupération des points :", error);
+                });
+        }
+
+        fetchPoints();
+    </script>
+</body>
+</html>

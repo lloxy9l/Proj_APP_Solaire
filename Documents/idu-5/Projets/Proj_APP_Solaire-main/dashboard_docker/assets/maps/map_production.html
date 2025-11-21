@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte de la Production</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            cursor: url('assets/img/panneau.png') 4 12, crosshair;
+        }
+
+        h1 {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 22px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 20px; /* Encore plus grand */
+            line-height: 28px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .legend i {
+            width: 30px;   /* plus large */
+            height: 18px;  /* plus haut */
+            float: left;
+            margin-right: 12px;
+            opacity: 0.9;
+            border: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Carte de la Production</h1>
+    <div id="map"></div>
+    <div class="legend">
+        <strong>Légende (kWh)</strong><br>
+        <i style="background:#006400"></i> 4000+<br>
+        <i style="background:#32CD32"></i> 3900 – 4000<br>
+        <i style="background:#FFFF00"></i> 3700 – 3900<br>
+        <i style="background:#FFA500"></i> 3500 – 3700<br>
+        <i style="background:#FF4500"></i> 3200 – 3500<br>
+        <i style="background:#FF0000"></i> < 3200<br>
+    </div>     
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+  <script>
+const map = L.map('map').setView([46.2044, 6.1432], 9);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+function getColor(prod) {
+  if (prod >= 4000) return "#006400";
+  else if (prod >= 3800) return "#32CD32";
+  else if (prod >= 3600) return "#FFFF00";
+  else if (prod >= 3400) return "#FFA500";
+  else if (prod >= 3200) return "#FF4500";
+  else return "#FF0000";
+}
+
+const markers = L.markerClusterGroup();
+
+// 🔹 Charge le JSON créé par Python
+fetch("assets/maps/production_prediction.json")
+  .then(r => r.json())
+  .then(data => {
+    data.forEach(p => {
+      const lat = p.latitude;
+      const lon = p.longitude;
+      const prodNow = p.production_actuelle;
+      const prodFuture = p.production_2035;
+      const variation = p.variation_percent;
+
+      const popup = `
+        <b>📍 Point GPS</b><br>
+        Latitude : ${lat.toFixed(4)}<br>
+        Longitude : ${lon.toFixed(4)}<br><br>
+        ⚡ Production actuelle : <b>${prodNow} kWh</b><br>
+        🔮 Prédiction 2035 : <b>${prodFuture} kWh</b><br>
+        📈 Évolution prévue : <b>${variation}%</b>
+      `;
+
+      const marker = L.circleMarker([lat, lon], {
+        radius: 8,
+        color: getColor(prodNow),
+        fillColor: getColor(prodNow),
+        fillOpacity: 0.8,
+        weight: 2
+      }).bindPopup(popup);
+
+      markers.addLayer(marker);
+    });
+    map.addLayer(markers);
+  })
+  .catch(e => console.error("Erreur chargement JSON :", e));
+</script>
+
+</body>
+</html>

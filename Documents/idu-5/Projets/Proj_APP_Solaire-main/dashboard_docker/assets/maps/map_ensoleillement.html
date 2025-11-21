@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte de l'Ensoleillement</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        h1 {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 22px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 20px; /* Encore plus grand */
+            line-height: 28px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .legend i {
+            width: 30px;   /* plus large */
+            height: 18px;  /* plus haut */
+            float: left;
+            margin-right: 12px;
+            opacity: 0.9;
+            border: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Durée moyenne d'ensoleillement par jour</h1>
+    <div id="map"></div>
+    <div class="legend">
+        <strong>Légende (h)</strong><br>
+        <i style="background:#05032c"></i> ≤ 7.0<br>
+        <i style="background:#51158c"></i> 7.5<br>
+        <i style="background:#a6209f"></i> 8.0<br>
+        <i style="background:#fbc43d"></i> 8.5<br>
+        <i style="background:#f0f921"></i> ≥ 9.0
+    </div>    
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+    <script>
+        const map = L.map('map').setView([46.2044, 6.1432], 9);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        function getColor(hours) {
+            if (hours > 9.0) return "#f0f921";
+            else if (hours > 8.9) return "#f4e621";
+            else if (hours > 8.8) return "#f8d72e";
+            else if (hours > 8.7) return "#fbc43d";
+            else if (hours > 8.6) return "#fda34e";
+            else if (hours > 8.5) return "#fb8761";
+            else if (hours > 8.4) return "#f56d75";
+            else if (hours > 8.3) return "#e95489";
+            else if (hours > 8.2) return "#d9419d";
+            else if (hours > 8.1) return "#c22fa3";
+            else if (hours > 8.0) return "#a6209f";
+            else if (hours > 7.9) return "#891c9b";
+            else if (hours > 7.8) return "#6c1a96";
+            else if (hours > 7.7) return "#51158c";
+            else if (hours > 7.6) return "#361083";
+            else if (hours > 7.5) return "#250c75";
+            else if (hours > 7.4) return "#180967";
+            else if (hours > 7.3) return "#0e0658";
+            else if (hours > 7.2) return "#08044a";
+            else if (hours > 7.1) return "#06043b";
+            else return "#05032c";
+        }
+
+        const markers = L.markerClusterGroup({
+            iconCreateFunction: function (cluster) {
+                const markers = cluster.getAllChildMarkers();
+
+                let sum = 0;
+                let count = 0;
+                markers.forEach(m => {
+                    let enso = m.options.ensoleillement;
+                    if (typeof enso === "number") {
+                        sum += enso;
+                        count++;
+                    }
+                });
+
+                const avgSeconds = count > 0 ? sum / count : 0;
+                const avgHours = avgSeconds / 3600;
+                const avgRounded = avgHours.toFixed(1);
+                const color = getColor(avgHours);
+
+                return L.divIcon({
+                    html: `<div style="
+                        background-color:${color};
+                        border-radius:50%;
+                        width: 40px;
+                        height: 40px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        border: 2px solid #fff;
+                        box-shadow: 0 0 5px rgba(0,0,0,0.4);
+                    ">${avgRounded}</div>`,
+                    className: 'cluster-icon',
+                    iconSize: [40, 40]
+                });
+            }
+        });
+
+        function fetchPoints() {
+            fetch('http://localhost:3000/getPoints')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(point => {
+                        const lat = point.latitude;
+                        const lon = point.longitude;
+                        const ensoleillement = point.ensoleillement;
+                        const ensoleillementHeures = ensoleillement / 3600;
+
+                        const popupContent = `
+                            <b>Point GPS</b><br>
+                            Latitude : ${lat}<br>
+                            Longitude : ${lon}<br>
+                            Ensoleillement : ${ensoleillementHeures.toFixed(2)} h
+                        `;
+
+                        const marker = L.marker([lat, lon], {
+                            icon: L.divIcon({
+                                className: 'custom-icon',
+                                html: `<div style="
+                                    background:${getColor(ensoleillementHeures)};
+                                    width: 20px;
+                                    height: 20px;
+                                    border-radius: 50%;
+                                    border: 2px solid #fff;
+                                    box-shadow: 0 0 3px rgba(0,0,0,0.5);
+                                "></div>`,
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            }),
+                            ensoleillement: ensoleillement
+                        }).bindPopup(popupContent);
+
+                        markers.addLayer(marker);
+                    });
+
+                    map.addLayer(markers);
+                })
+                .catch(error => {
+                    console.error("Erreur lors de la récupération des points :", error);
+                });
+        }
+
+        fetchPoints();
+    </script>
+</body>
+</html>
