@@ -27,11 +27,16 @@ Tu es **SolarXBot**, assistant IA spécialisé pour un projet de panneaux solair
 et d’analyse énergétique basé sur la région de Genève.
 
 Ta mission principale est d’aider l’utilisateur à :
-- comprendre les données météo et énergétiques affichées dans le tableau de bord SolarX (Dash),
+- comprendre les données météo et énergétiques affichées dans le tableau de bord SolarX,
 - analyser la pertinence des zones pour l’installation de panneaux solaires,
 - interpréter les indicateurs (moyennes, tendances, ratios production/consommation),
-- proposer des requêtes SQL adaptées à la base MySQL de SolarX,
-- produire des réponses claires, pédagogiques et fiables à partir des résultats SQL.
+- proposer les meilleurs emplacements pour l’installation de panneaux solaires en t’appuyant sur un score global d’optimalité,
+- proposer des analyses et recommandations basées sur les données internes du projet SolarX,
+- produire des réponses claires, pédagogiques et fiables, en restant au niveau métier.
+
+Très important :
+- Dans tes réponses, tu ne dois jamais mentionner les mots « SQL », « base de données », « MySQL », « schéma », « table », « colonne », « projet_solarx » ou le bloc spécial ```sql_query```.
+- Si l’utilisateur te demande comment tu obtiens les données, tu réponds avec des formulations haut niveau comme « j’analyse les données SolarX » ou « j’utilise les données du système », sans détailler la partie technique.
 
 ════════════════════════════════════════════
 1. STRUCTURE DE LA BASE DE DONNÉES SOLARX
@@ -225,16 +230,34 @@ def build_contents(
     history: List[Dict[str, str]],
     user_message: str,
     image_part: Optional[types.Part] = None,
+    optim_context: str = "",
 ) -> list:
     """
     Construit la liste de `types.Content` envoyée à Gemini.
+
+    - history : historique des messages (user / model)
+    - user_message : message courant (question de l'utilisateur ou prompt intermédiaire)
+    - image_part : éventuelle image encodée (analyse de photo, carte, etc.)
+    - optim_context : contexte chiffré sur l'optimisation des panneaux solaires
+      (top des meilleurs points, score global, etc.)
     """
     contents: list[types.Content] = []
 
     # 1) Prompt système / rôle de SolarXBot
+    system_text = SYSTEM_INSTRUCTION
+    if optim_context:
+        system_text = SYSTEM_INSTRUCTION + (
+            "\n\n════════════════════════════════════════════\n"
+            "CONTEXTE NUMÉRIQUE D'OPTIMISATION DES PANNEAUX SOLAIRES\n"
+            "════════════════════════════════════════════\n"
+            f"{optim_context}\n"
+            "Utilise ce contexte lorsque l'utilisateur demande les meilleurs emplacements\n"
+            "pour installer des panneaux solaires ou des comparaisons de potentiel solaire."
+        )
+
     system_content = types.Content(
         role="user",
-        parts=[types.Part(text=SYSTEM_INSTRUCTION)],
+        parts=[types.Part(text=system_text)],
     )
     contents.append(system_content)
 
@@ -346,6 +369,212 @@ def _format_sql_result(col_names, rows, max_rows: int = 50) -> str:
 
 
 # ============================================================================
+#  HELPERS OPTIMISATION DES PANNEAUX SOLAIRES
+# ============================================================================
+
+def _fetch_aggregated_points_for_optim() -> List[Dict]:
+    """Récupère, pour chaque point GPS, les moyennes annuelles des indicateurs.
+    On utilise une requête SQL agrégée pour limiter le volume de données.
+    """
+    conn = mysql.connector.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+    )
+    query = '''
+        SELECT
+            p.idpoint,
+            p.latitude,
+            p.longitude,
+            p.adresse,
+            AVG(CAST(m.temperature AS DECIMAL(10,4))) AS temperature,
+            AVG(CAST(m.ensoleillement AS DECIMAL(10,4))) AS ensoleillement,
+            AVG(CAST(m.irradiance AS DECIMAL(10,4))) AS irradiance,
+            AVG(CAST(m.precipitation AS DECIMAL(10,4))) AS precipitation
+        FROM 2026_solarx_pointsgps p
+        JOIN 2026_solarx_mesures m ON p.idpoint = m.idpoint
+        GROUP BY p.idpoint, p.latitude, p.longitude, p.adresse
+    '''
+    try:
+        cur = conn.cursor()
+        cur.execute(query)
+        rows = cur.fetchall()
+        col_names = [d[0] for d in cur.description]
+    finally:
+        cur.close()
+        conn.close()
+
+    points: List[Dict] = [dict(zip(col_names, row)) for row in rows]
+
+    # Conversion types + dérivation de la production et de l'ensoleillement (heures)
+    for pt in points:
+        # Helper local pour convertir en float
+        def _to_float(x):
+            try:
+                return float(x) if x is not None else None
+            except Exception:
+                return None
+
+        pt["temperature"] = _to_float(pt.get("temperature"))
+        # ensoleillement : stocké en secondes → conversion en heures
+        ens_sec = _to_float(pt.get("ensoleillement"))
+        pt["ensoleillement"] = ens_sec / 3600.0 if ens_sec is not None else None
+        pt["irradiance"] = _to_float(pt.get("irradiance"))
+        pt["precipitation"] = _to_float(pt.get("precipitation"))
+
+        # Production annuelle estimée (même formule que dans le dashboard)
+        if pt["irradiance"] is not None:
+            pt["production"] = pt["irradiance"] * 365 * 3
+        else:
+            pt["production"] = None
+
+    return points
+
+
+def _compute_optimal_points(top_n: int = 10) -> List[Dict]:
+    """Calcule un score d'optimalité (0–100) pour chaque point GPS
+    et renvoie les top_n meilleurs emplacements.
+    """
+    points = _fetch_aggregated_points_for_optim()
+    if not points:
+        return []
+
+    # Préparation des listes de valeurs pour normalisation
+    def _collect(key: str):
+        vals = [pt.get(key) for pt in points if isinstance(pt.get(key), (int, float))]
+        return vals
+
+    ens_vals = _collect("ensoleillement")
+    irr_vals = _collect("irradiance")
+    prod_vals = _collect("production")
+    prec_vals = _collect("precipitation")
+    temp_vals = _collect("temperature")
+
+    def _minmax(values):
+        if not values:
+            return None, None
+        return min(values), max(values)
+
+    ens_min, ens_max = _minmax(ens_vals)
+    irr_min, irr_max = _minmax(irr_vals)
+    prod_min, prod_max = _minmax(prod_vals)
+    prec_min, prec_max = _minmax(prec_vals)
+
+    # Pour la température, on utilise l'écart à 20°C
+    temp_dev_vals = [abs(v - 20) for v in temp_vals if v is not None]
+    temp_dev_min, temp_dev_max = _minmax(temp_dev_vals)
+
+    def _normalize(value, vmin, vmax):
+        if value is None or vmin is None or vmax is None or vmin == vmax:
+            return 0.5
+        return (value - vmin) / (vmax - vmin) if vmax != vmin else 0.5
+
+    for pt in points:
+        ens = pt.get("ensoleillement")
+        irr = pt.get("irradiance")
+        prod = pt.get("production")
+        prec = pt.get("precipitation")
+        temp = pt.get("temperature")
+
+        norm_ens = _normalize(ens, ens_min, ens_max)
+        norm_irr = _normalize(irr, irr_min, irr_max)
+        norm_prod = _normalize(prod, prod_min, prod_max)
+        norm_prec = _normalize(prec, prec_min, prec_max)
+
+        temp_dev = abs(temp - 20) if isinstance(temp, (int, float)) else None
+        norm_temp_dev = _normalize(temp_dev, temp_dev_min, temp_dev_max)
+
+        # Scores partiels
+        score_ens = norm_ens
+        score_irr = norm_irr
+        score_prod = norm_prod
+        score_prec = 1 - norm_prec           # moins de pluie = mieux
+        score_temp = 1 - norm_temp_dev       # plus proche de 20°C = mieux
+
+        # Clip dans [0,1] par sécurité
+        def _clip(x):
+            return max(0.0, min(1.0, x))
+
+        score_ens = _clip(score_ens)
+        score_irr = _clip(score_irr)
+        score_prod = _clip(score_prod)
+        score_prec = _clip(score_prec)
+        score_temp = _clip(score_temp)
+
+        # Pondérations cohérentes avec le dashboard
+        w_ens = 0.30
+        w_irr = 0.25
+        w_prod = 0.25
+        w_prec = 0.10
+        w_temp = 0.10
+
+        score_global = 100.0 * (
+            w_ens * score_ens
+            + w_irr * score_irr
+            + w_prod * score_prod
+            + w_prec * score_prec
+            + w_temp * score_temp
+        )
+
+        pt["score_global"] = score_global
+
+    # Tri décroissant par score_global
+    points_sorted = sorted(points, key=lambda p: p.get("score_global", 0.0), reverse=True)
+    return points_sorted[:top_n]
+
+
+def _format_optimal_points_table(points: List[Dict], max_rows: int = 10) -> str:
+    """Formate les points optimaux sous forme de petit tableau texte
+    facile à exploiter par le LLM dans ses réponses.
+    """
+    if not points:
+        return "Aucun point n'a pu être évalué pour l'optimisation."
+
+    headers = [
+        "idpoint",
+        "adresse",
+        "score_global",
+        "ensoleillement_h",
+        "irradiance",
+        "production",
+        "precipitation",
+        "temperature",
+    ]
+    header_line = " | ".join(headers)
+    lines = [header_line]
+
+    def _fmt(v, digits=1):
+        try:
+            if v is None:
+                return "-"
+            if isinstance(v, (int, float)):
+                fmt_str = f"{{:.{digits}f}}"
+                return fmt_str.format(v)
+            return str(v)
+        except Exception:
+            return str(v)
+
+    for pt in points[:max_rows]:
+        row = [
+            str(pt.get("idpoint", "")),
+            str(pt.get("adresse", "") or "-"),
+            _fmt(pt.get("score_global"), 1),
+            _fmt(pt.get("ensoleillement"), 1),
+            _fmt(pt.get("irradiance"), 1),
+            _fmt(pt.get("production"), 1),
+            _fmt(pt.get("precipitation"), 1),
+            _fmt(pt.get("temperature"), 1),
+        ]
+        lines.append(" | ".join(row))
+
+    if len(points) > max_rows:
+        lines.append(f"... ({len(points) - max_rows} lignes supplémentaires tronquées)")
+
+    return "\n".join(lines)
+
+
+# ============================================================================
 #  FONCTION PRINCIPALE : APPEL À GEMINI
 # ============================================================================
 
@@ -379,6 +608,50 @@ def generate_chat_response(
     Phase 3 : on demande à Gemini de transformer la réponse texte en JSON
     { "answer": "...", "zone": {...} } pour identifier une éventuelle commune / zone.
     """
+    # Préparation éventuelle du contexte d'optimisation (meilleurs emplacements)
+    user_lower = (user_message or "").lower()
+    optimisation_keywords = [
+        "meilleur emplacement",
+        "meilleurs emplacements",
+        "meilleur endroit",
+        "meilleurs endroits",
+        "optimisation du placement",
+        "placement des panneaux",
+        "où installer les panneaux",
+        "où mettre les panneaux",
+        "où placer les panneaux",
+        "emplacement optimal",
+        "emplacement le plus optimal",
+        "best location",
+        "best locations",
+        "optimal placement",
+        "where to install the panels",
+        "where to put the panels",
+    ]
+    wants_optim = any(k in user_lower for k in optimisation_keywords)
+    optim_context = ""
+    optimal_points_for_context: List[Dict] = []
+    if wants_optim:
+        try:
+            optimal_points_for_context = _compute_optimal_points(top_n=10)
+        except Exception:
+            optimal_points_for_context = []
+        if optimal_points_for_context:
+            optim_table = _format_optimal_points_table(optimal_points_for_context, max_rows=10)
+            optim_context = (
+                "Un score_global d'optimalité (0–100) pour l'installation de panneaux solaires "
+                "a été calculé pour chaque point GPS de la base, à partir des moyennes de : "
+                "ensoleillement (heures), irradiance, production estimée, précipitations et température.\n"
+                "- Le score valorise un fort ensoleillement / irradiance / production,\n"
+                "- pénalise les fortes précipitations,\n"
+                "- et favorise les températures proches de 20°C.\n"
+                "Les pondérations utilisées sont : 30% ensoleillement, 25% irradiance, 25% production, "
+                "10% précipitations, 10% température.\n"
+                "Voici le top des points actuellement calculé (trié par score_global décroissant) :\n"
+                f"{optim_table}"
+            )
+
+
     client = get_gemini_client()
 
     # Prépare éventuellement la partie image
@@ -392,7 +665,7 @@ def generate_chat_response(
     # ==========================
     # PHASE 1 : PLAN SQL / RÉPONSE
     # ==========================
-    contents_phase1 = build_contents(history, user_message, image_part=image_part)
+    contents_phase1 = build_contents(history, user_message, image_part=image_part, optim_context=optim_context)
 
     resp1 = client.models.generate_content(
         model=GEMINI_MODEL,
@@ -441,7 +714,7 @@ Consigne importante :
   du projet SolarX (énergie solaire à Genève).
 - Réponds dans la même langue que la question de l'utilisateur.
 """
-            contents_phase2 = build_contents(history, phase2_prompt, image_part=image_part)
+            contents_phase2 = build_contents(history, phase2_prompt, image_part=image_part, optim_context=optim_context)
 
             resp2 = client.models.generate_content(
                 model=GEMINI_MODEL,
@@ -497,7 +770,7 @@ Règles :
 - Si tu n'es pas sûr de la zone, mets "zone": null.
 - Ne mets pas de texte avant ou après le JSON, pas de ``` ni de balises.
 """
-        contents_json = build_contents(history, json_prompt, image_part=image_part)
+        contents_json = build_contents(history, json_prompt, image_part=image_part, optim_context=optim_context)
 
         resp_json = client.models.generate_content(
             model=GEMINI_MODEL,

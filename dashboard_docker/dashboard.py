@@ -9,6 +9,15 @@ from datetime import datetime
 import mysql.connector
 import pandas as pd
 from chatbot_page import get_chatbot_layout, register_chatbot_callbacks
+from layouts.home import render_main_content
+from layouts.ensoleillement import render_ensoleillement
+from layouts.temperature import render_temperature
+from layouts.precipitations import render_precipitations
+from layouts.optimisation import render_optimisation
+from layouts.electricite import render_electricite
+from layouts.profile import render_profile
+from layouts.credit import render_credit
+
 from dash import callback_context
 
 
@@ -76,9 +85,11 @@ def fetch_data():
 # Charger les données
 data_meteo,data_conso,data_commune = fetch_data()
 
-df = pd.DataFrame(data_meteo)
+df_meteo = pd.DataFrame(data_meteo)
+# Copie principale utilisée pour les différents graphiques
+df = df_meteo.copy()
 df_conso = pd.DataFrame(data_conso)
-prod_df = pd.DataFrame(data_meteo)
+prod_df = df_meteo.copy()
 commune_df = pd.DataFrame(data_commune)
 
 
@@ -114,6 +125,88 @@ df_mois = df.groupby("mois")[["ensoleillement", "temperature", "precipitation"]]
 }).reset_index()
 
 print('Data Fetched')
+
+# =====================================================================
+#       OPTIMISATION : score global par point GPS pour panneaux PV
+# =====================================================================
+
+# On repart des données météo complètes (une ligne par date et par idpoint)
+opt_df = df_meteo.copy()
+
+# Agrégation : moyennes globales par point GPS
+opt_points = (
+    opt_df.groupby("idpoint")
+    .agg(
+        latitude=("latitude", "first"),
+        longitude=("longitude", "first"),
+        temperature=("temperature", "mean"),
+        ensoleillement=("ensoleillement", "mean"),
+        irradiance=("irradiance", "mean"),
+        precipitation=("precipitation", "mean"),
+        production=("production", "mean"),
+    )
+    .reset_index()
+)
+
+# Ajout de l'adresse si disponible
+if "idpoint" in commune_df.columns:
+    opt_points = opt_points.merge(
+        commune_df[["idpoint", "adresse"]],
+        on="idpoint",
+        how="left",
+    )
+
+# Petite fonction de normalisation [0,1]
+def _normalize(series):
+    min_val = series.min()
+    max_val = series.max()
+    if pd.isna(min_val) or pd.isna(max_val) or max_val == min_val:
+        # Si pas de variance ou valeurs manquantes, on renvoie 0.5 (neutre)
+        return pd.Series(0.5, index=series.index)
+    return (series - min_val) / (max_val - min_val)
+
+# Normalisation des indicateurs
+opt_points["norm_ens"] = _normalize(opt_points["ensoleillement"])
+opt_points["norm_irr"] = _normalize(opt_points["irradiance"])
+opt_points["norm_prod"] = _normalize(opt_points["production"])
+opt_points["norm_prec"] = _normalize(opt_points["precipitation"])
+
+# Température : on favorise la proximité d'une température "idéale" (≈20°C)
+temp_dev = (opt_points["temperature"] - 20).abs()
+opt_points["norm_temp_dev"] = _normalize(temp_dev)
+
+# Scores partiels [0,1] (on inverse pour précipitation & écart de température)
+opt_points["score_ens"] = opt_points["norm_ens"]
+opt_points["score_irr"] = opt_points["norm_irr"]
+opt_points["score_prod"] = opt_points["norm_prod"]
+opt_points["score_prec"] = 1 - opt_points["norm_prec"]      # moins de pluie = mieux
+opt_points["score_temp"] = 1 - opt_points["norm_temp_dev"]  # proche de 20°C = mieux
+
+for col in ["score_ens", "score_irr", "score_prod", "score_prec", "score_temp"]:
+    opt_points[col] = opt_points[col].clip(0, 1)
+
+# Pondérations (ajustables facilement)
+w_ens = 0.30
+w_irr = 0.25
+w_prod = 0.25
+w_prec = 0.10
+w_temp = 0.10
+
+opt_points["score_global"] = 100 * (
+    w_ens * opt_points["score_ens"]
+    + w_irr * opt_points["score_irr"]
+    + w_prod * opt_points["score_prod"]
+    + w_prec * opt_points["score_prec"]
+    + w_temp * opt_points["score_temp"]
+)
+
+opt_points["score_global"] = opt_points["score_global"].fillna(0.0)
+
+# Tri pour récupérer les meilleurs emplacements
+opt_points_sorted = opt_points.sort_values("score_global", ascending=False).reset_index(drop=True)
+top_opt_points = opt_points_sorted.head(10)
+
+print("Scores d'optimalité calculés pour", len(opt_points_sorted), "points GPS.")
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -462,6 +555,24 @@ vertical_header = html.Div(
                 html.A(
                     children=[
                         html.Img(
+                            src="assets/img/sun.png",  # Icône pour Optimisation
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
+                        ),
+                        html.Span(
+                            "Optimisation",
+                            style={
+                                "margin-left": "10px",
+                                "font-size": "14px",
+                                "vertical-align": "middle",
+                                "display": "none",
+                            },
+                        ),
+                    ],
+                    href="/optimisation",
+                ),
+                html.A(
+                    children=[
+                        html.Img(
                             src="assets/img/team.png",  # Icône pour Rapports
                             style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
@@ -491,163 +602,6 @@ vertical_header = html.Div(
 ######################              HTML conteneur main_content                                          #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
-main_content = html.Div(
-    style={
-        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
-        "width": "100%",
-    },
-    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
-
-    children=[
-        # Barre de recherche et photo de profil
-        html.Div(
-            style={
-                "display": "flex",
-                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
-                "align-items": "center",  # Alignement vertical
-                "margin-bottom": "20px",
-            },
-            children=[
-                # Barre de recherche moderne
-                html.Div(
-                    style={
-                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
-                        "width": "50%",
-                    },
-                    children=[
-                        html.Div(
-                            style={
-                                "position": "absolute",
-                                "left": "10px",
-                                "top": "50%",
-                                "transform": "translateY(-50%)",
-                            },
-                            children=[
-                                html.Img(
-                                    src="assets/img/search-icon.png",
-                                    style={"width": "30px", "height": "30px"},
-                                ),
-                            ],
-                        ),
-                        dcc.Input(
-                            id="search-input",
-                            type="text",
-                            placeholder="Rechercher...",
-                            style={
-                                "width": "100%",
-                                "padding": "10px 10px 10px 50px",
-                                "border-radius": "2em",
-                                "border": "2px solid #005DFF",
-                                "background-color": "#f8f8f8",
-                                "font-size": "18px",
-                                "outline": "none",
-                            },
-                        ),
-                    ],
-                ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
-            ],
-        ),
-
-        # Section des cartes pour les informations chiffrées
-        html.Div(
-            style={
-                "display": "flex",
-                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
-                "align-items": "center",  # Alignement vertical
-                "margin-bottom": "20px",
-            },
-            children=[
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                html.P("Température", className="card-title"),
-                                html.H4(f"{global_means['temperature']:.2f}°C/jour", className="card-text"),
-                            ]
-                        ),
-                    ],
-                    style={"width": "18rem"},
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                html.P("Précipitations", className="card-title"),
-                                html.H4(f"{global_means['precipitation']:.2f} mm/jour", className="card-text"),
-                            ]
-                        ),
-                    ],
-                    style={"width": "18rem"},
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                html.P("Ensoleillement", className="card-title"),
-                                html.H4(f"{global_means['ensoleillement']:.2f} heures/jour", className="card-text"),
-                            ]
-                        ),
-                    ],
-                    style={"width": "18rem"},
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                html.P("Irradiance", className="card-title"),
-                                html.H4(f"{global_means['irradiance']:.2f} W/m²/jour", className="card-text"),
-                            ]
-                        ),
-                    ],
-                    style={"width": "18rem"},
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                html.P("Consommation éléctrique moyenne", className="card-title"),
-                                html.H4(f"{global_means['consommation']:.2f} GWh/année", className="card-text"),
-                            ]
-                        ),
-                    ],
-                ),
-            ],
-        ),
-
-        # Section des cartes pour les graphiques
-        html.Div(
-            style={
-                "width":"100%",
-                "height":"calc(100vh-350px)",
-            },
-            children=[
-                # Première ligne - 1 colonne
-                dbc.Card(
-                [
-                    dbc.CardBody(
-                        [
-                            html.Iframe(srcDoc=map_production, width='100%', height='800px')
-                        ]
-                    ),
-                ]
-                ),
-            ],
-        ),
-    ],
-)
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -683,166 +637,6 @@ fig_ens.update_layout(
     }
 )
 # Contenu ensoleillement
-ensoleillement_content = html.Div(
-    style={
-        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
-        "width": "100%",
-    },
-    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
-    
-    children=[
-        # Barre de recherche et photo de profil
-        html.Div(
-            style={
-                "display": "flex",
-                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
-                "align-items": "center",  # Alignement vertical
-                "margin-bottom": "20px",
-            },
-            children=[
-                # Barre de recherche moderne
-                html.Div(
-                    style={
-                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
-                        "width": "50%",
-                    },
-                    children=[
-                        html.Div(
-                            style={
-                                "position": "absolute",
-                                "left": "10px",
-                                "top": "50%",
-                                "transform": "translateY(-50%)",
-                            },
-                            children=[ 
-                                html.Img(
-                                    src="assets/img/search-icon.png",
-                                    style={"width": "30px", "height": "30px"},
-                                ),
-                            ],
-                        ),
-                        dcc.Input(
-                            id="search-input",
-                            type="text",
-                            placeholder="Rechercher...",
-                            style={
-                                "width": "100%",
-                                "padding": "10px 10px 10px 50px",
-                                "border-radius": "2em",
-                                "border": "2px solid #005DFF",
-                                "background-color": "#f8f8f8",
-                                "font-size": "18px",
-                                "outline": "none",
-                            },
-                        ),
-                    ],
-                ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
-            ],
-        ),
-        
-        # Titre de la section
-        html.H1(
-            "Ensoleillement",  # Nom de la page
-            style={
-                "font-size": "36px",  # Taille de la police
-                "margin-bottom": "20px",  # Espace en dessous du titre
-            },
-        ),
-        
-        # Section des cartes pour les graphiques - 1 seule colonne pour la première ligne, 3 colonnes pour la deuxième ligne
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "1fr",  # 1 seule colonne sur la première ligne
-                "gap": "20px",  # Espacement entre les cartes
-            },
-            children=[
-                # Première carte (ligne 1)
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                               html.Iframe(srcDoc=map_ensoleillement, width='100%', height='800px')
-                            ]
-                        ),
-                    ]
-                ),
-            ],
-        ),
-        
-        # Deuxième ligne - 2 colonnes
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
-                "gap": "20px",  # Espacement entre les cartes
-                "margin-top":"20px",
-                "margin-bottom": "20px",
-                "height":"50vh"
-            },
-            children=[
-                # Deuxième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-2",
-                                    figure=fig_ens,
-                                    style={"width": "100%", "height": "100%"},
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Troisième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-3",
-                                    figure = px.bar(
-                                        df_mois,
-                                        x="mois",
-                                        y="ensoleillement",
-                                        title="Distribution des heures d'ensoleillement par mois",
-                                        labels={"ensoleillement": "Heures d'ensoleillement", "mois": "Mois"},
-                                        color="ensoleillement",  # Utilisation d'une échelle de couleur pour l'ensoleillement
-                                        color_continuous_scale="Plasma",
-                                    ).update_layout(
-                                        plot_bgcolor='white',  # Fond du graphique en blanc
-                                        paper_bgcolor='white',  # Fond extérieur en blanc
-                                        title={
-                                        "font": {"size": 22,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-
-                                    ),
-                                    style={"width": "100%", "height": "100%"},
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-            ],
-        ),
-    ],
-)
 ##########################################################################################################################################
 ##########################################################################################################################################
 ######################              HTML conteneur temperature                                           #################################
@@ -877,163 +671,6 @@ fig_temp.update_layout(
     }
 )
 # Contenu température
-temperature_content = html.Div(
-    style={
-        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
-        "width": "100%",
-    },
-    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
-    
-    children=[
-        # Barre de recherche et photo de profil
-        html.Div(
-            style={
-                "display": "flex",
-                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
-                "align-items": "center",  # Alignement vertical
-                "margin-bottom": "20px",
-            },
-            children=[
-                # Barre de recherche moderne
-                html.Div(
-                    style={
-                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
-                        "width": "50%",
-                    },
-                    children=[
-                        html.Div(
-                            style={
-                                "position": "absolute",
-                                "left": "10px",
-                                "top": "50%",
-                                "transform": "translateY(-50%)",
-                            },
-                            children=[ 
-                                html.Img(
-                                    src="assets/img/search-icon.png",
-                                    style={"width": "30px", "height": "30px"},
-                                ),
-                            ],
-                        ),
-                        dcc.Input(
-                            id="search-input",
-                            type="text",
-                            placeholder="Rechercher...",
-                            style={
-                                "width": "100%",
-                                "padding": "10px 10px 10px 50px",
-                                "border-radius": "2em",
-                                "border": "2px solid #005DFF",
-                                "background-color": "#f8f8f8",
-                                "font-size": "18px",
-                                "outline": "none",
-                            },
-                        ),
-                    ],
-                ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
-            ],
-        ),
-        html.H1(
-            "Temperature",  # Nom de la page
-            style={
-                "font-size": "36px",  # Taille de la police
-                "margin-bottom": "20px",  # Espace en dessous du titre
-            },
-        ),
-        
-        # Section des cartes pour les graphiques - 1 seule colonne pour la première ligne, 3 colonnes pour la deuxième ligne
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "1fr",  # 1 seule colonne sur la première ligne
-                "gap": "20px",  # Espacement entre les cartes
-            },
-            children=[
-                # Première carte (ligne 1)
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                               html.Iframe(srcDoc=map_temperature, width='100%', height='800px')
-                            ]
-                        ),
-                    ]
-                ),
-            ],
-        ),
-        
-        # Deuxième ligne - 3 colonnes
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "repeat(2, 1fr)",  # 2 colonnes
-                "gap": "20px",  # Espacement entre les cartes
-                "margin-top":"20px",
-                "height":"50vh"
-            },
-            children=[
-                # Deuxième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-2",
-                                    
-                                    figure=fig_temp,
-                                    style={"width": "100%", "height": "100%"},
-                                ),
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Troisième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-3",
-                                    figure = px.bar(
-                                        df_mois,
-                                        x="mois",
-                                        y="temperature",
-                                        title="Distribution des temperature par mois",
-                                        labels={"temperature": "Temperature en °C", "mois": "Mois"},
-                                        color="temperature",  # Utilisation d'une échelle de couleur pour la temperature
-                                        color_continuous_scale="Plasma",
-                                    ).update_layout(
-                                        plot_bgcolor='white',  # Fond du graphique en blanc
-                                        paper_bgcolor='white',  # Fond extérieur en blanc
-                                        title={
-                                        "font": {"size": 22,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-                                    ),
-                                    style={"width": "100%", "height": "100%"},
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-            ],
-        ),
-    ],
-)
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -1068,172 +705,82 @@ fig_prec.update_layout(
     }
 )
 # Contenu Précipitations
-precipitations_content = html.Div(
-    style={
-        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
-        "width": "100%",
+
+
+
+##########################################################################################################################################
+##########################################################################################################################################
+##########################################################################################################################################
+##########################################################################################################################################
+######################              HTML conteneur optimisation                                       #################################
+##########################################################################################################################################
+##########################################################################################################################################
+
+# Figure Mapbox : score global par point
+fig_opt = px.scatter_mapbox(
+    opt_points_sorted,
+    lat="latitude",
+    lon="longitude",
+    color="score_global",
+    size="score_global",
+    hover_name=opt_points_sorted["adresse"] if "adresse" in opt_points_sorted.columns else opt_points_sorted["idpoint"].astype(str),
+    hover_data={
+        "idpoint": True,
+        "score_global": ':.1f',
+        "ensoleillement": ':.1f',
+        "irradiance": ':.1f',
+        "production": ':.1f',
+        "precipitation": ':.1f',
+        "temperature": ':.1f',
     },
-    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
-    
-    children=[
-        # Barre de recherche et photo de profil
-        html.Div(
-            style={
-                "display": "flex",
-                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
-                "align-items": "center",  # Alignement vertical
-                "margin-bottom": "20px",
-            },
-            children=[
-                # Barre de recherche moderne
-                html.Div(
-                    style={
-                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
-                        "width": "50%",
-                    },
-                    children=[
-                        html.Div(
-                            style={
-                                "position": "absolute",
-                                "left": "10px",
-                                "top": "50%",
-                                "transform": "translateY(-50%)",
-                            },
-                            children=[
-                                html.Img(
-                                    src="assets/img/search-icon.png",
-                                    style={"width": "30px", "height": "30px"},
-                                ),
-                            ],
-                        ),
-                        dcc.Input(
-                            id="search-input",
-                            type="text",
-                            placeholder="Rechercher...",
-                            style={
-                                "width": "100%",
-                                "padding": "10px 10px 10px 50px",
-                                "border-radius": "2em",
-                                "border": "2px solid #005DFF",
-                                "background-color": "#f8f8f8",
-                                "font-size": "18px",
-                                "outline": "none",
-                            },
-                        ),
-                    ],
-                ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
-            ],
+    color_continuous_scale="YlOrRd",
+    mapbox_style="open-street-map",
+    zoom=10,
+    center={
+        "lat": float(opt_points_sorted["latitude"].mean()) if not opt_points_sorted.empty else 0,
+        "lon": float(opt_points_sorted["longitude"].mean()) if not opt_points_sorted.empty else 0,
+    },
+)
+
+fig_opt.update_layout(
+    title={
+        "text": "Score global d'optimalité pour l'installation de panneaux solaires",
+        "font": {"size": 22},
+        "x": 0.5,
+    },
+    margin={"r": 0, "t": 60, "l": 0, "b": 0},
+)
+
+# Tableau TOP 10 des meilleurs emplacements
+top_rows = []
+for _, row in top_opt_points.iterrows():
+    top_rows.append(
+        html.Tr(
+            [
+                html.Td(int(row["idpoint"])),
+                html.Td(row.get("adresse", "-")),
+                html.Td(f"{row['score_global']:.1f} %"),
+            ]
+        )
+    )
+
+top_points_table = html.Table(
+    [
+        html.Thead(
+            html.Tr(
+                [
+                    html.Th("ID Point"),
+                    html.Th("Adresse"),
+                    html.Th("Score global"),
+                ]
+            )
         ),
-        
-        # Titre de la section
-        html.H1(
-            "Précipitations",  # Nom de la page
-            style={
-                "font-size": "36px",  # Taille de la police
-                "margin-bottom": "20px",  # Espace en dessous du titre
-            },
-        ),
-        
-        # Section des cartes pour les graphiques en 1x3 pour la première ligne, puis 3 colonnes sur la deuxième ligne
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "1fr",  # 1 seule colonne sur la première ligne
-                "gap": "20px",  # Espacement entre les cartes
-                "margin-bottom": "20px",
-            },
-            children=[
-                # Première carte (ligne 1)
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                               html.Iframe(srcDoc=map_precipitation, width='100%', height='800px')
-                            ]
-                        ),
-                    ]
-                ),
-            ],
-        ),
-        
-        # Deuxième ligne - 3 colonnes
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "repeat(2, 1fr)",  # 3 colonnes
-                "gap": "20px",  # Espacement entre les cartes
-                "margin-top": "20px",
-                "margin-bottom": "20px",
-                "height":"50vh",
-            },
-            children=[
-                # Deuxième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-2",
-                                    figure=fig_prec,
-                                    style={"width": "100%", "height": "100%"},
-                                ),
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Troisième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-3",
-                                    figure = px.bar(
-                                        df_mois,
-                                        x="mois",
-                                        y="precipitation",
-                                        title="Distribution des precipitation par mois",
-                                        labels={"Precipitation": "Precipitation en mm", "mois": "Mois"},
-                                        color="precipitation",  # Utilisation d'une échelle de couleur pour la precipitation
-                                        color_continuous_scale=["#a9cce3", "#5499c7", "#2471a3", "#1f618d", "#243852"],
-                                        
-                                    ).update_layout(
-                                        plot_bgcolor='white',  # Fond du graphique en blanc
-                                        paper_bgcolor='white',  # Fond extérieur en blanc
-                                        title={
-                                        "font": {"size": 22,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                    }
-                                    ),
-                                    style={"width": "100%", "height": "100%"},
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-            ],
-        ),
+        html.Tbody(top_rows),
     ],
+    style={"width": "100%", "fontSize": "14px"},
 )
 
 
-
-##########################################################################################################################################
-##########################################################################################################################################
 ######################              HTML conteneur electricité                                           #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -1274,162 +821,6 @@ figure_pie.update_layout(
     title_x=0.5  # Centrer le titre horizontalement
 )
 
-electricite_content = html.Div(
-    style={
-        "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
-        "width": "100%",
-    },
-    id="main-content",  # Ajout d'un id pour changer dynamiquement le contenu
-    
-    children=[
-        # Barre de recherche et photo de profil
-        html.Div(
-            style={
-                "display": "flex",
-                "justify-content": "space-between",  # Utilisation de space-between pour espacer les éléments
-                "align-items": "center",  # Alignement vertical
-                "margin-bottom": "20px",
-            },
-            children=[
-                # Barre de recherche moderne
-                html.Div(
-                    style={
-                        "position": "relative",  # Pour positionner l'icône à l'intérieur de l'input
-                        "width": "50%",
-                    },
-                    children=[
-                        html.Div(
-                            style={
-                                "position": "absolute",
-                                "left": "10px",
-                                "top": "50%",
-                                "transform": "translateY(-50%)",
-                            },
-                            children=[
-                                html.Img(
-                                    src="assets/img/search-icon.png",
-                                    style={"width": "30px", "height": "30px"},
-                                ),
-                            ],
-                        ),
-                        dcc.Input(
-                            id="search-input",
-                            type="text",
-                            placeholder="Rechercher...",
-                            style={
-                                "width": "100%",
-                                "padding": "10px 10px 10px 50px",
-                                "border-radius": "2em",
-                                "border": "2px solid #005DFF",
-                                "background-color": "#f8f8f8",
-                                "font-size": "18px",
-                                "outline": "none",
-                            },
-                        ),
-                    ],
-                ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
-            ],
-        ),
-        html.H1(
-            "Electricité",  # Nom de la page
-            style={
-                "font-size": "36px",  # Taille de la police
-                "margin-bottom": "20px",  # Espace en dessous du titre
-            },
-        ),        # Section des cartes pour les graphiques en 3x3
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "1fr",  # 1 seule colonne sur la première ligne
-                "gap": "20px",  # Espace entre les cartes
-            },
-            children = [
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id='map-graph',
-                                    
-                                    style={
-                                        'height': 'calc(100vh - 350px)',
-                                        'width': '100%'
-                                    }
-                                ),
-                                html.Div(
-                                    id='click-data',
-                                    style={
-                                        'padding': '5px',
-                                        'font-size': '20px'
-                                    }
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-            ]
-
-        ),
-        # Deuxième ligne - 3 colonnes
-        html.Div(
-            style={
-                "display": "grid",
-                "grid-template-columns": "repeat(2, 1fr)",  # 3 colonnes
-                "gap": "20px",  # Espacement entre les cartes
-                "margin-top": "20px",
-            },
-            children=[
-                # Deuxième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-2",
-                                    figure=figure_pie,
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Troisième carte
-                dbc.Card(
-                    [
-                        dbc.CardBody(
-                            [
-                                dcc.Graph(
-                                    id="graph-3",
-                                    figure=fig_ratio.update_layout(
-                                        plot_bgcolor='white',  # Fond du graphique en blanc
-                                        paper_bgcolor='white',  # Fond extérieur en blanc
-                                        title={
-                                        "font": {"size": 22,},  # Taille et gras du titre
-                                        "x": 0.5,  # Centrer le titre horizontalement
-                                        }
-                                    )
-                                )
-                            ]
-                        ),
-                    ]
-                ),
-            ],
-        ),
-    ],
-)
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -1437,241 +828,39 @@ electricite_content = html.Div(
 ##########################################################################################################################################
 ##########################################################################################################################################
 #Profile content
-profile_content = html.Div(
-    style={
-        "margin-left": "80px",
-        "padding": "20px",
-        "display": "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        "height": "810px",
-        "width": "917px",
-        "background-color": "#005dff",
-        "border-radius": "30px",
-        "position": "absolute",
-        "top": "50%",
-        "left": "50%",
-        "transform": "translate(-50%, -50%)",
-    },
-    children=[
-        html.Div(
-            style={
-                "background-color": "white",
-                "padding": "30px",
-                "border-radius": "10px",
-                "width": "800px",
-                "height": "705px",
-                "box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
-            },
-            children=[
-                html.Div(
-                    style={"margin-top": "10px"},
-                    children=[
-                        html.Div(
-                            style={"display": "flex", "align-items": "center", "position": "relative"},
-                            children=[
-                                # Conteneur de l'image de profil
-                                html.Div(
-                                    style={
-                                        "position": "relative",
-                                        "width": "120px",
-                                        "height": "120px",
-                                    },
-                                    children=[
-                                        html.Img(
-                                            src="assets/img/user_img.webp",
-                                            style={
-                                                "width": "120px",
-                                                "height": "120px",
-                                                "border-radius":"50%",
-                                                "border": "3px solid white",
-                                            }
-                                        ),
-                                    ]
-                                ),
-                                # Infos utilisateur
-                                html.Div(
-                                    style={"margin-left": "15px"},
-                                    children=[
-                                        html.H3("Bercier Thomas", style={"margin-bottom": "5px"}),
-                                        html.P("bercierthomas@gmail.com", style={"color": "#888"}),
-                                    ]
-                                ),
-                            ]
-                        ),
-                    ]
-                ),
-                html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                # Detalhes do usuário
-                html.Div(
-                    style={"margin-top": "20px"},
-                    children=[
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Name", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("Bercier Thomas", style={"margin-bottom": "15px", "margin-left": "10px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Email
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Email account", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("bercierthomas@gmail.com", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Telefone
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Mobile number", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("0616021962", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Localização
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Location", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("FRANCE", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Password
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Password", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("*********", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Botão de "Save Changes"
-                html.Div(
-                    style={"display": "flex", "justify-content": "center", "margin-top": "30px"},
-                    children=[
-                        html.Button(
-                            "Save Changes",
-                            style={
-                                "background-color": "#2489FF",
-                                "color": "white",
-                                "padding": "10px 30px",
-                                "border": "none",
-                                "border-radius": "6px",
-                                "cursor": "pointer",
-                                "font-size": "18px",
-                            }
-                        ),
-                    ]
-                ),
-            ]
-        )
-    ]
-)
 
 
-credit_content = html.Div(
-    style={
-        "margin-left": "80px",
-        "padding": "20px",
-        "display": "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        "height": "810px",
-        "width": "917px",
-        "background-color": "#005dff",
-        "border-radius": "30px",
-        "position": "absolute",
-        "top": "50%",
-        "left": "50%",
-        "transform": "translate(-50%, -50%)",
-    },
-    children=[
-        html.Div(
-            style={
-                "background-color": "white",
-                "padding": "30px",
-                "border-radius": "10px",
-                "width": "800px",
-                "height": "705px",
-                "box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
-            },
-            children=[
-                # Titre de la page
-                html.Div(
-                    style={"text-align": "center", "margin-bottom": "20px"},
-                    children=[
-                        html.H1("Geneva Weather Data Collection", style={"color": "#005dff"}),
-                        html.P(
-                            "Projet réalisé par un groupe d'étudiants pour collecter et analyser les données météorologiques de la région de Genève.",
-                            style={"color": "#555"}
-                        )
-                    ]
-                ),
-
-                # Description du projet
-                html.Div(
-                    style={"margin-bottom": "20px"},
-                    children=[
-                        html.H2("Introduction", style={"color": "#005dff"}),
-                        html.P(
-                            "Ce projet vise à collecter des données météorologiques détaillées et fiables pour la région de Genève. Ces données sont essentielles pour des applications comme la planification urbaine, l'agriculture, et les projets d'énergie renouvelable."
-                        ),
-                        html.H2("Objectifs", style={"color": "#005dff"}),
-                        html.Ul([
-                            html.Li("Collecter des données sur la luminosité, la radiance, la température et les précipitations."),
-                            html.Li("Fournir des informations exploitables pour les parties prenantes locales."),
-                            html.Li("Créer une base de données robuste pour le stockage sécurisé des données.")
-                        ])
-                    ]
-                ),
-
-                # Liste des membres de l'équipe
-                html.Div(
-                    style={"margin-bottom": "20px"},
-                    children=[
-                        html.H2("Équipe", style={"color": "#005dff"}),
-                        html.Ul([
-                            html.Li("Maxens Soldan"),
-                            html.Li("Baptiste Renand"),
-                            html.Li("Arno Wilhelm"),
-                            html.Li("Degouey Corentin"),
-                            html.Li("Hassnaoui Walid"),
-                            html.Li("Bercier Thomas"),
-                            html.Li("Francielle Andrade Cardoso")
-                        ]),
-                        html.P("Coryright 2025")
-                    ]
-                ),
-            ]
-        )
-    ]
-)
 
 
 # Disposition principale
 app.layout = html.Div(
-    style={"display": "flex"},
+    style={
+        "display": "flex",
+        "height": "100vh",
+        "width": "100vw",
+        "margin": "0",
+        "padding": "0",
+        "overflow": "hidden",
+    },
     children=[
         dcc.Store(id="sidebar-width", data="80px"),
         dcc.Store(id="chat-map-action"),
         vertical_header,
-        main_content,
-        get_chatbot_layout(),          
+        html.Div(
+            id="main-content",
+            style={
+                "padding": "20px 80px 0 80px",  # Ajoute un espace entre le header et le contenu principal
+                "width": "100%",
+                "flex": "1",
+                "height": "100%",
+                "overflowY": "auto",
+            },
+        ),
+        get_chatbot_layout(),
         dcc.Location(id='url', refresh=False),
     ],
 )
+
 
 
 
@@ -1688,21 +877,23 @@ app.layout = html.Div(
 )
 def display_content(pathname):
     if pathname == '/':
-        return main_content
+        return render_main_content(global_means=global_means, map_production=map_production)
     elif pathname == "/home":
-        return main_content
+        return render_main_content(global_means=global_means, map_production=map_production)
     elif pathname == "/ensoleillement":
-        return ensoleillement_content
+        return render_ensoleillement(df_mois=df_mois, fig_ens=fig_ens, map_ensoleillement=map_ensoleillement)
     elif pathname == "/temperature":
-        return temperature_content
+        return render_temperature(df_mois=df_mois, fig_temp=fig_temp, map_temperature=map_temperature)
     elif pathname == "/precipitations":
-        return precipitations_content
+        return render_precipitations(df_mois=df_mois, fig_prec=fig_prec, map_precipitation=map_precipitation)
     elif pathname == "/electricite":
-        return electricite_content
+        return render_electricite(fig_ratio=fig_ratio, figure_pie=figure_pie)
+    elif pathname == "/optimisation":
+        return render_optimisation(fig_opt=fig_opt, top_points_table=top_points_table)
     elif pathname == "/profile_content":
-        return profile_content
+        return render_profile()
     elif pathname == "/credit":
-        return credit_content
+        return render_credit()
     else:
         return html.H1("Page non trouvée")
 
@@ -1739,102 +930,10 @@ def toggle_sidebar_width(n_clicks, current_width):
     prevent_initial_call=True,
 )
 def update_menu_text_display(sidebar_width):
-    # Si la largeur est réduite, on cache les spans
-    if sidebar_width == "80px":
-        # Retourne le menu avec les spans cachés
-        return [
-            html.A(
-                children=[
-                    html.Img(src="assets/img/home.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Accueil", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                ],
-                href="/home",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/sun.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Ensoleillement", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                ],
-                href="/ensoleillement",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/thermometer.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Température", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                ],
-                href="/temperature",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/rain.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Précipitations", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                ],
-                href="#",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/lightning.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Electricité", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                ],
-                href="/electricite",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                ],
-                href="/credit",
-            ),
-        ]
+    if sidebar_width == '80px':
+        return [html.A(children=[html.Img(src='assets/img/home.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Accueil', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/home'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Ensoleillement', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/ensoleillement'), html.A(children=[html.Img(src='assets/img/thermometer.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Température', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/temperature'), html.A(children=[html.Img(src='assets/img/rain.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Précipitations', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='#'), html.A(children=[html.Img(src='assets/img/lightning.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Electricité', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/electricite'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Optimisation', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/optimisation'), html.A(children=[html.Img(src='assets/img/team.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Crédits', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/credit')]
     else:
-        # Si la largeur est agrandie, on montre les spans
-        return [
-            html.A(
-                children=[
-                    html.Img(src="assets/img/home.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Accueil", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
-                ],
-                href="/home",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/sun.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Ensoleillement", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
-                ],
-                href="/ensoleillement",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/thermometer.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Température", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
-                ],
-                href="/temperature",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/rain.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Précipitations", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
-                ],
-                href="/precipitations",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/lightning.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Electricité", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
-                ],
-                href="electricite",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
-                ],
-                href="credit",
-            ),
-            
-        ]
-
-# Callback pour mettre à jour la carte et gérer les clics sur les zones
+        return [html.A(children=[html.Img(src='assets/img/home.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Accueil', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/home'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Ensoleillement', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/ensoleillement'), html.A(children=[html.Img(src='assets/img/thermometer.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Température', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/temperature'), html.A(children=[html.Img(src='assets/img/rain.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Précipitations', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/precipitations'), html.A(children=[html.Img(src='assets/img/lightning.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Electricité', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='electricite'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Optimisation', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/optimisation'), html.A(children=[html.Img(src='assets/img/team.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Crédits', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='credit')]
 from dash import callback_context
 
 @app.callback(
