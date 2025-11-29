@@ -1,13 +1,16 @@
 import json
 import os
 import dash
-from dash import html, dcc, Input, Output, State
+from dash import html, dcc, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import mysql.connector
 import pandas as pd
+from chatbot_page import get_chatbot_layout, register_chatbot_callbacks
+from dash import callback_context
+
 
 host = os.environ.get("DB_HOST", "db")  # Allows deployment to override DB host/IP
 node_host = os.environ.get("NODE_HOST", "localhost")
@@ -160,6 +163,57 @@ def get_communes_data(df, geojson_data):
 geojson_data = load_geojson('geo_data_boundaries.geojson')
 df = get_data()
 
+# ==== Pré-calcul des centroïdes des communes depuis le GeoJSON ====
+
+def _compute_centroid_from_geometry(geometry):
+    """
+    Calcule un centroïde simple (moyenne des points) pour un Polygon ou MultiPolygon.
+    Suffisant pour recadrer la carte.
+    """
+    gtype = geometry.get("type")
+    coords = geometry.get("coordinates", [])
+
+    points = []
+
+    if gtype == "Polygon":
+        # coords = [ [ [lon, lat], [lon, lat], ... ] ]  (on prend l'anneau extérieur)
+        if coords:
+            points = coords[0]
+    elif gtype == "MultiPolygon":
+        # coords = [ [ [ [lon, lat], ... ] ], [ [lon, lat], ... ], ... ]
+        for poly in coords:
+            if poly:
+                points.extend(poly[0])
+
+    if not points:
+        return None, None
+
+    lons = [p[0] for p in points]
+    lats = [p[1] for p in points]
+    return sum(lats) / len(lats), sum(lons) / len(lons)
+
+
+# Dictionnaire global : nom_commune_normalisé -> {lat, lon}
+COMMUNE_CENTROIDS = {}
+
+for feature in geojson_data.get("features", []):
+    props = feature.get("properties", {})
+    name = props.get("name")
+    geometry = feature.get("geometry")
+
+    if not name or not geometry:
+        continue
+
+    lat, lon = _compute_centroid_from_geometry(geometry)
+    if lat is None or lon is None:
+        continue
+
+    key = name.strip().lower()
+    COMMUNE_CENTROIDS[key] = {"lat": lat, "lon": lon}
+
+print(f"Centroïdes calculés pour {len(COMMUNE_CENTROIDS)} communes.")
+
+
 # Étape 1 : Calculer la moyenne globale
 moyenne_globale_conso = df['consommation'].mean()
 print(f"Moyenne consommation globale (kWh): {moyenne_globale_conso:.2f}")
@@ -303,7 +357,11 @@ filtered_features = [
 
 
 # Initialisation de l'application Dash
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    suppress_callback_exceptions=True  # important avec les layouts externes
+)
 
 
 # Style général pour la barre latérale
@@ -1606,12 +1664,17 @@ credit_content = html.Div(
 app.layout = html.Div(
     style={"display": "flex"},
     children=[
-        dcc.Store(id="sidebar-width", data="80px"),  # Stocker la largeur actuelle de la barre latérale
+        dcc.Store(id="sidebar-width", data="80px"),
+        dcc.Store(id="chat-map-action"),
         vertical_header,
         main_content,
-        dcc.Location(id='url', refresh=False),  # Composant Location pour détecter l'URL
+        get_chatbot_layout(),          
+        dcc.Location(id='url', refresh=False),
     ],
 )
+
+
+
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -1638,10 +1701,11 @@ def display_content(pathname):
         return electricite_content
     elif pathname == "/profile_content":
         return profile_content
-    elif pathname =="/credit":
+    elif pathname == "/credit":
         return credit_content
     else:
         return html.H1("Page non trouvée")
+
 
 # Callback pour changer la largeur de la barre latérale
 @app.callback(
@@ -1771,75 +1835,135 @@ def update_menu_text_display(sidebar_width):
         ]
 
 # Callback pour mettre à jour la carte et gérer les clics sur les zones
+from dash import callback_context
+
 @app.callback(
-    
     [Output('map-graph', 'figure'), Output('click-data', 'children')],
-    [Input('map-graph', 'clickData')],
+    [
+        Input('map-graph', 'clickData'),
+        Input('chat-map-action', 'data'),   # 👈 nouvelle entrée
+    ],
     suppress_callback_exceptions=True,
-    
 )
-def update_map(clickData):
-    # Définir une valeur par défaut pour 'commune_name' s'il n'y a pas encore de clic
+def update_map(clickData, chat_action):
+    # -----------------------------
+    # 1) Déterminer la commune cible
+    # -----------------------------
     commune_name = None
-    if clickData:
-        commune_name = clickData['points'][0]['location']
+    ctx = callback_context
 
-    # Préparer les données pour la carte
-    commune_names = [ft['properties']['name'] for ft in communes_geo_data]
-    
-    # Extraire les consommations pour chaque commune dans la même ordre que les noms
-    consommation_dict = dict(zip(df['nom_commune'], df['consommation']))
-    
-    # Utiliser les valeurs de consommation, avec une valeur par défaut si la consommation est manquante
+    if ctx.triggered:
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # 👉 Cas 1 : action venant du chatbot
+        if trigger_id == "chat-map-action" and chat_action:
+            # On attend un dict du type {"type": "commune", "name": "Meyrin", ...}
+            if isinstance(chat_action, dict) and chat_action.get("type") == "commune":
+                commune_name = chat_action.get("name")
+
+        # 👉 Cas 2 : clic direct sur la carte
+        elif trigger_id == "map-graph" and clickData:
+            commune_name = clickData["points"][0]["location"]
+
+    # -----------------------------
+    # 2) Construction de la carte
+    # -----------------------------
+    # Communes présentes dans le GeoJSON
+    commune_names = [ft["properties"]["name"] for ft in communes_geo_data]
+
+    # Dictionnaire nom_commune → consommation
+    consommation_dict = dict(zip(df["nom_commune"], df["consommation"]))
+
+    # Liste des valeurs de consommation dans le même ordre que commune_names
     consommation_values = [consommation_dict.get(name, 0) for name in commune_names]
-    
-    # Création de la carte avec les polygones colorés en fonction de la consommation
+
     fig = px.choropleth_mapbox(
-        geojson={'type': 'FeatureCollection', 'features': communes_geo_data},
-        featureidkey="properties.name",  # Identifier par le nom de la commune
-        title="Consommation annuelle d'electricité en KWh",
-        locations=commune_names,  # Communes du GeoJSON
-        color=consommation_values,  # Coloration par la consommation d'électricité
-        color_continuous_scale="Viridis",  # Utilisation d'une échelle de couleur continue
+        geojson={"type": "FeatureCollection", "features": communes_geo_data},
+        featureidkey="properties.name",
+        title="Consommation annuelle d'électricité en kWh",
+        locations=commune_names,
+        color=consommation_values,
+        color_continuous_scale="Viridis",
         mapbox_style="open-street-map",
+        center={"lat": 46.1833, "lon": 6.0833},
         zoom=10,
-        range_color=[0,7000],
-        center={"lat": 46.1833, "lon": 6.0833}  # Centré sur Genève
-    )
-    fig.update_layout(
-        plot_bgcolor='white',  # Fond du graphique en blanc
-        paper_bgcolor='white',  # Fond extérieur en blanc
-        title={
-        "font": {"size": 22,},  # Taille et gras du titre
-        "x": 0.5,  # Centrer le titre horizontalement
-        }
+        range_color=[0, 7000],
     )
 
-    # Personnaliser l'apparence des polygones
+    fig.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        title={"font": {"size": 22}, "x": 0.5},
+    )
     fig.update_traces(marker_line_width=2, marker_line_color="white")
 
-    # Initialiser le message d'information
-    click_info = "Cliquez sur un polygone pour plus d'informations"
-    
-    # Si un clic a été détecté sur un polygone
+    # -----------------------------
+    # 3) Info texte / zoom si commune ciblée
+    # -----------------------------
+    click_info = "Cliquez sur un polygone ou demandez une commune au chatbot."
+
     if commune_name:
-        # Récupérer les données associées à la commune sélectionnée
-        commune_data = df[df['nom_commune'] == commune_name]
+        # On normalise un peu pour matcher la BDD
+        commune_mask = df["nom_commune"].str.lower().str.strip() == commune_name.lower().strip()
+        commune_data = df[commune_mask]
+
+        # Option : zoom/coeur sur la commune si elle existe dans le geojson
+        geo_match = [
+            f
+            for f in communes_geo_data
+            if f["properties"].get("name", "").lower().strip()
+            == commune_name.lower().strip()
+        ]
+        if geo_match:
+            # On recentre la carte sur cette commune
+            # (centre du bounding box approximatif)
+            coords = geo_match[0]["geometry"]["coordinates"][0]
+            lats = [c[1] for c in coords]
+            lons = [c[0] for c in coords]
+            fig.update_layout(
+                mapbox_center={"lat": sum(lats) / len(lats), "lon": sum(lons) / len(lons)},
+                mapbox_zoom=11,
+            )
+
         if not commune_data.empty:
-            consumption = commune_data['consommation'].iloc[0]
-            year = commune_data['annee'].iloc[0]
-            click_info = html.Div([
-                html.P(f"Commune sélectionnée : {commune_name}"),
-                html.P(f"Consommation : {consumption} kWh"),
-                html.P(f"Année : {year}")
-            ])
+            consumption = commune_data["consommation"].iloc[0]
+            year = commune_data["annee"].iloc[0]
+            click_info = html.Div(
+                [
+                    html.P(f"Commune sélectionnée : {commune_name}"),
+                    html.P(f"Consommation : {consumption} kWh"),
+                    html.P(f"Année : {year}"),
+                ]
+            )
         else:
-            click_info = html.Div([
-                html.P(f"Commune sélectionnée : {commune_name}"),
-                html.P("Données non disponibles")
-            ])
+            click_info = html.Div(
+                [
+                    html.P(f"Commune sélectionnée : {commune_name}"),
+                    html.P("Données non disponibles"),
+                ]
+            )
 
     return fig, click_info
+
+
+# Callback pour rediriger vers la page Electricité quand le chatbot demande une commune
+@app.callback(
+    Output("url", "pathname"),
+    Input("chat-map-action", "data"),
+    prevent_initial_call=True,
+)
+def redirect_from_chat(chat_action):
+    """Si le chatbot envoie une action de type 'commune',
+    on bascule automatiquement vers la page /electricite.
+    """
+    if isinstance(chat_action, dict) and chat_action.get("type") == "commune":
+        return "/electricite"
+    return no_update
+
+
+# Enregistrement des callbacks du chatbot
+register_chatbot_callbacks(app)
+
 
 # Exécution de l'application
 if __name__ == "__main__":

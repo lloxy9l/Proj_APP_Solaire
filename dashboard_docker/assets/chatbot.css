@@ -1,0 +1,22 @@
+/* Scrollbar dans la fenêtre de chat */
+#chat-history::-webkit-scrollbar {
+  width: 6px;
+}
+#chat-history::-webkit-scrollbar-track {
+  background: transparent;
+}
+#chat-history::-webkit-scrollbar-thumb {
+  background: #c2c8e6;
+  border-radius: 3px;
+}
+
+/* Hover sur le bouton flottant */
+#chatbot-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3);
+}
+
+/* Transition douce ouverture/fermeture (gérée via display en JS) */
+#chatbot-window {
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
