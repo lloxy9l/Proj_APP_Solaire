@@ -30,7 +30,7 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
       UPLOAD_LIMIT: 100M
     ports:
-      - "80:80"
+      - "8030:80"
 
   python_app:
     build: ./python_image
