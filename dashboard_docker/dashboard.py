@@ -30,8 +30,8 @@ zones_df = pd.read_json("assets/maps/zones_industrielles.json")
 print(f"✅ {len(zones_df)} zones industrielles chargées (fichier JSON)")
 
 # =====================================================
-host = os.environ.get("DB_HOST", "db")  # Allows deployment to override DB host/IP
-node_host = os.environ.get("NODE_HOST", "localhost")
+host = os.environ.get("DB_HOST", "mysql_db")  # Allows deployment to override DB host/IP
+node_host = os.environ.get("NODE_HOST", "nodejs")
 node_port = os.environ.get("NODE_PORT", "3000")
 node_base_url = f"http://{node_host}:{node_port}"
 user = "root"
