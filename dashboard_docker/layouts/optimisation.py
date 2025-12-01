@@ -51,18 +51,6 @@ def render_optimisation(fig_opt, top_points_table):
                         ),
                     ],
                 ),
-                html.A(
-                    href="/profile_content",
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    ),
-                ),
             ],
         ),
 
@@ -126,4 +114,3 @@ def render_optimisation(fig_opt, top_points_table):
         ),
     ],
 )
-

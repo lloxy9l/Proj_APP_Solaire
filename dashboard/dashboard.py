@@ -324,17 +324,7 @@ vertical_header = html.Div(
                         html.Span("Electricité", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="/electricite",
-                ),
-                html.A(
-                    children=[
-                        html.Img(
-                            src="assets/img/team.png",  # Icône pour Rapports
-                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
-                        ),
-                        html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
-                    ],
-                    href="/credit",
-                ),
+                )
             ]
         ),
         
@@ -410,19 +400,6 @@ main_content = html.Div(
                             },
                         ),
                     ],
-                ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
                 ),
             ],
         ),
@@ -628,19 +605,6 @@ ensoleillement_content = html.Div(
                         ),
                     ],
                 ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
             ],
         ),
         
@@ -843,19 +807,6 @@ temperature_content = html.Div(
                         ),
                     ],
                 ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
             ],
         ),
         html.H1(
@@ -1053,19 +1004,6 @@ precipitations_content = html.Div(
                             },
                         ),
                     ],
-                ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
                 ),
             ],
         ),
@@ -1280,19 +1218,6 @@ electricite_content = html.Div(
                         ),
                     ],
                 ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
             ],
         ),
         html.H1(
@@ -1385,248 +1310,6 @@ electricite_content = html.Div(
 
 ##########################################################################################################################################
 ##########################################################################################################################################
-######################                                HTML conteneur profile                             #################################
-##########################################################################################################################################
-##########################################################################################################################################
-#Profile content
-profile_content = html.Div(
-    style={
-        "margin-left": "80px",
-        "padding": "20px",
-        "display": "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        "height": "810px",
-        "width": "917px",
-        "background-color": "#005dff",
-        "border-radius": "30px",
-        "position": "absolute",
-        "top": "50%",
-        "left": "50%",
-        "transform": "translate(-50%, -50%)",
-    },
-    children=[
-        html.Div(
-            style={
-                "background-color": "white",
-                "padding": "30px",
-                "border-radius": "10px",
-                "width": "800px",
-                "height": "705px",
-                "box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
-            },
-            children=[
-                # Título e imagem do usuário
-                html.Div(
-                    style={"margin-top": "10px"},
-                    children=[
-                        html.Div(
-                            style={"display": "flex", "align-items": "center"},
-                            children=[
-                                # Imagem do usuário
-                                html.Div(
-                                    style={
-                                        "position": "relative",
-                                        "width": "120px",
-                                        "height": "120px",
-                                        "border-radius": "50%",
-                                        "background-image": "url('assets/img/user_image.png')",
-                                        "background-size": "cover",
-                                        "background-position": "center",
-                                        "border": "3px solid white",
-                                    },
-                                    children=[
-                                        # Ícone de editar imagem
-                                        html.Div(
-                                            style={
-                                                "position": "absolute",
-                                                "bottom": "5px",
-                                                "right": "5px",
-                                                "background-color": "#005dff",
-                                                "border-radius": "50%",
-                                                "padding": "5px",
-                                                "background-image": "url('assets/svg/edit.svg')",
-                                            },
-                                            children=[
-                                                html.Img(
-                                                    src="assets/edit-icon.png",
-                                                    style={"width": "20px", "height": "20px"},
-                                                ),
-                                            ],
-                                        ),
-                                    ],
-                                ),
-                                # Nome e email do usuário
-                                html.Div(
-                                    style={"margin-left": "15px"},
-                                    children=[
-                                        html.H3("User Name", style={"margin-bottom": "5px"}),
-                                        html.P("useremail@example.com", style={"color": "#888"}),
-                                    ]
-                                ),
-                            ]
-                        ),
-                    ]
-                ),
-                html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                # Detalhes do usuário
-                html.Div(
-                    style={"margin-top": "20px"},
-                    children=[
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Name", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("Your Name", style={"margin-bottom": "15px", "margin-left": "10px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Email
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Email account", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("yourname@gmail.com", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Telefone
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Mobile number", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("Add number", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Localização
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Location", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("USA", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                        html.Hr(style={"border": "none", "border-top": "1px solid #ddd", "box-shadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "margin": "5px 0"}),
-
-                        # Password
-                        html.Div(
-                            style={"display": "flex", "justify-content": "space-between"},
-                            children=[
-                                html.Label("Password", style={"font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"}),
-                                html.P("*********", style={"margin-bottom": "15px", "font-size": "20px", "text-shadow": "2px 2px 5px rgba(0, 0, 0, 0.2)"})
-                            ]
-                        ),
-                    ]
-                ),
-                
-                # Botão de "Save Changes"
-                html.Div(
-                    style={"display": "flex", "justify-content": "center", "margin-top": "30px"},
-                    children=[
-                        html.Button(
-                            "Save Changes",
-                            style={
-                                "background-color": "#2489FF",
-                                "color": "white",
-                                "padding": "10px 30px",
-                                "border": "none",
-                                "border-radius": "6px",
-                                "cursor": "pointer",
-                                "font-size": "18px",
-                            }
-                        ),
-                    ]
-                ),
-            ]
-        )
-    ]
-)
-
-
-credit_content = html.Div(
-    style={
-        "margin-left": "80px",
-        "padding": "20px",
-        "display": "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        "height": "810px",
-        "width": "917px",
-        "background-color": "#005dff",
-        "border-radius": "30px",
-        "position": "absolute",
-        "top": "50%",
-        "left": "50%",
-        "transform": "translate(-50%, -50%)",
-    },
-    children=[
-        html.Div(
-            style={
-                "background-color": "white",
-                "padding": "30px",
-                "border-radius": "10px",
-                "width": "800px",
-                "height": "705px",
-                "box-shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
-            },
-            children=[
-                # Titre de la page
-                html.Div(
-                    style={"text-align": "center", "margin-bottom": "20px"},
-                    children=[
-                        html.H1("Geneva Weather Data Collection", style={"color": "#005dff"}),
-                        html.P(
-                            "Projet réalisé par un groupe d'étudiants pour collecter et analyser les données météorologiques de la région de Genève.",
-                            style={"color": "#555"}
-                        )
-                    ]
-                ),
-
-                # Description du projet
-                html.Div(
-                    style={"margin-bottom": "20px"},
-                    children=[
-                        html.H2("Introduction", style={"color": "#005dff"}),
-                        html.P(
-                            "Ce projet vise à collecter des données météorologiques détaillées et fiables pour la région de Genève. Ces données sont essentielles pour des applications comme la planification urbaine, l'agriculture, et les projets d'énergie renouvelable."
-                        ),
-                        html.H2("Objectifs", style={"color": "#005dff"}),
-                        html.Ul([
-                            html.Li("Collecter des données sur la luminosité, la radiance, la température et les précipitations."),
-                            html.Li("Fournir des informations exploitables pour les parties prenantes locales."),
-                            html.Li("Créer une base de données robuste pour le stockage sécurisé des données.")
-                        ])
-                    ]
-                ),
-
-                # Liste des membres de l'équipe
-                html.Div(
-                    style={"margin-bottom": "20px"},
-                    children=[
-                        html.H2("Équipe", style={"color": "#005dff"}),
-                        html.Ul([
-                            html.Li("Maxens Soldan"),
-                            html.Li("Baptiste Renand"),
-                            html.Li("Arno Wilhelm"),
-                            html.Li("Degouey Corentin"),
-                            html.Li("Hassnaoui Walid"),
-                            html.Li("Bercier Thomas"),
-                            html.Li("Francielle Andrade Cardoso")
-                        ]),
-                        html.P("Coryright 2025")
-                    ]
-                ),
-            ]
-        )
-    ]
-)
-
-
 # Disposition principale
 app.layout = html.Div(
     style={"display": "flex"},
@@ -1661,10 +1344,6 @@ def display_content(pathname):
         return precipitations_content
     elif pathname == "/electricite":
         return electricite_content
-    elif pathname == "/profile_content":
-        return profile_content
-    elif pathname =="/credit":
-        return credit_content
     else:
         return html.H1("Page non trouvée")
 
@@ -1739,13 +1418,6 @@ def update_menu_text_display(sidebar_width):
                 ],
                 href="/electricite",
             ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                ],
-                href="/credit",
-            ),
         ]
     else:
         # Si la largeur est agrandie, on montre les spans
@@ -1784,13 +1456,6 @@ def update_menu_text_display(sidebar_width):
                     html.Span("Electricité", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
                 ],
                 href="electricite",
-            ),
-            html.A(
-                children=[
-                    html.Img(src="assets/img/team.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                    html.Span("Crédits", style={"margin-left": "10px", "font-size": "18px", "vertical-align": "middle", "display": "inline", "color": "#fff", "font-size": "16px", "outline": "none"}),
-                ],
-                href="credit",
             ),
             
         ]

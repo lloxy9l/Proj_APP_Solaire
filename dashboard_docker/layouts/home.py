@@ -56,19 +56,6 @@ def render_main_content(global_means, map_production):
                         ),
                     ],
                 ),
-                # Photo de profil
-                html.A(
-                    href="/profile_content",  # Remplacez par le lien voulu
-                    children=html.Img(
-                        src="assets/img/profile.png",
-                        style={
-                            "width": "65px",
-                            "height": "65px",
-                            "border-radius": "50%",
-                            "border": "2px solid #fff",
-                        },
-                    )
-                ),
             ],
         ),
 
@@ -159,4 +146,3 @@ def render_main_content(global_means, map_production):
         ),
     ],
 )
-

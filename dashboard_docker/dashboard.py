@@ -15,8 +15,6 @@ from layouts.temperature import render_temperature
 from layouts.precipitations import render_precipitations
 from layouts.optimisation import render_optimisation
 from layouts.electricite import render_electricite
-from layouts.profile import render_profile
-from layouts.credit import render_credit
 
 from dash import callback_context
 
@@ -570,16 +568,6 @@ vertical_header = html.Div(
                     ],
                     href="/optimisation",
                 ),
-                html.A(
-                    children=[
-                        html.Img(
-                            src="assets/img/team.png",  # Icône pour Rapports
-                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
-                        ),
-                        html.Span("Crédits", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
-                    ],
-                    href="/credit",
-                ),
             ]
         ),
         
@@ -890,10 +878,6 @@ def display_content(pathname):
         return render_electricite(fig_ratio=fig_ratio, figure_pie=figure_pie)
     elif pathname == "/optimisation":
         return render_optimisation(fig_opt=fig_opt, top_points_table=top_points_table)
-    elif pathname == "/profile_content":
-        return render_profile()
-    elif pathname == "/credit":
-        return render_credit()
     else:
         return html.H1("Page non trouvée")
 
@@ -931,9 +915,23 @@ def toggle_sidebar_width(n_clicks, current_width):
 )
 def update_menu_text_display(sidebar_width):
     if sidebar_width == '80px':
-        return [html.A(children=[html.Img(src='assets/img/home.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Accueil', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/home'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Ensoleillement', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/ensoleillement'), html.A(children=[html.Img(src='assets/img/thermometer.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Température', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/temperature'), html.A(children=[html.Img(src='assets/img/rain.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Précipitations', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='#'), html.A(children=[html.Img(src='assets/img/lightning.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Electricité', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/electricite'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Optimisation', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/optimisation'), html.A(children=[html.Img(src='assets/img/team.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Crédits', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/credit')]
+        return [
+            html.A(children=[html.Img(src='assets/img/home.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Accueil', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/home'),
+            html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Ensoleillement', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/ensoleillement'),
+            html.A(children=[html.Img(src='assets/img/thermometer.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Température', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/temperature'),
+            html.A(children=[html.Img(src='assets/img/rain.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Précipitations', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='#'),
+            html.A(children=[html.Img(src='assets/img/lightning.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Electricité', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/electricite'),
+            html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Optimisation', style={'margin-left': '10px', 'font-size': '14px', 'vertical-align': 'middle', 'display': 'none'})], href='/optimisation'),
+        ]
     else:
-        return [html.A(children=[html.Img(src='assets/img/home.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Accueil', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/home'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Ensoleillement', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/ensoleillement'), html.A(children=[html.Img(src='assets/img/thermometer.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Température', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/temperature'), html.A(children=[html.Img(src='assets/img/rain.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Précipitations', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/precipitations'), html.A(children=[html.Img(src='assets/img/lightning.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Electricité', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='electricite'), html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Optimisation', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/optimisation'), html.A(children=[html.Img(src='assets/img/team.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Crédits', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='credit')]
+        return [
+            html.A(children=[html.Img(src='assets/img/home.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Accueil', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/home'),
+            html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Ensoleillement', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/ensoleillement'),
+            html.A(children=[html.Img(src='assets/img/thermometer.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Température', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/temperature'),
+            html.A(children=[html.Img(src='assets/img/rain.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Précipitations', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/precipitations'),
+            html.A(children=[html.Img(src='assets/img/lightning.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Electricité', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='electricite'),
+            html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Optimisation', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/optimisation'),
+        ]
 from dash import callback_context
 
 @app.callback(
