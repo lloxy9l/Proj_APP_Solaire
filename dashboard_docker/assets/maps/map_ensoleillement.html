@@ -139,48 +139,60 @@
             }
         });
 
-        function fetchPoints() {
-            fetch('http://localhost:3000/getPoints')
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(point => {
-                        const lat = point.latitude;
-                        const lon = point.longitude;
-                        const ensoleillement = point.ensoleillement;
-                        const ensoleillementHeures = ensoleillement / 3600;
+        function addPointsToMap(data) {
+            data.forEach(point => {
+                const lat = point.latitude;
+                const lon = point.longitude;
+                const ensoleillement = point.ensoleillement;
+                const ensoleillementHeures = ensoleillement / 3600;
 
-                        const popupContent = `
-                            <b>Point GPS</b><br>
-                            Latitude : ${lat}<br>
-                            Longitude : ${lon}<br>
-                            Ensoleillement : ${ensoleillementHeures.toFixed(2)} h
-                        `;
+                const popupContent = `
+                    <b>Point GPS</b><br>
+                    Latitude : ${lat}<br>
+                    Longitude : ${lon}<br>
+                    Ensoleillement : ${ensoleillementHeures.toFixed(2)} h
+                `;
 
-                        const marker = L.marker([lat, lon], {
-                            icon: L.divIcon({
-                                className: 'custom-icon',
-                                html: `<div style="
-                                    background:${getColor(ensoleillementHeures)};
-                                    width: 20px;
-                                    height: 20px;
-                                    border-radius: 50%;
-                                    border: 2px solid #fff;
-                                    box-shadow: 0 0 3px rgba(0,0,0,0.5);
-                                "></div>`,
-                                iconSize: [20, 20],
-                                iconAnchor: [10, 10]
-                            }),
-                            ensoleillement: ensoleillement
-                        }).bindPopup(popupContent);
+                const marker = L.marker([lat, lon], {
+                    icon: L.divIcon({
+                        className: 'custom-icon',
+                        html: `<div style="
+                            background:${getColor(ensoleillementHeures)};
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            border: 2px solid #fff;
+                            box-shadow: 0 0 3px rgba(0,0,0,0.5);
+                        "></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    }),
+                    ensoleillement: ensoleillement
+                }).bindPopup(popupContent);
 
-                        markers.addLayer(marker);
-                    });
+                markers.addLayer(marker);
+            });
 
-                    map.addLayer(markers);
-                })
-                .catch(error => {
-                    console.error("Erreur lors de la récupération des points :", error);
-                });
+            map.addLayer(markers);
+        }
+
+        async function fetchPoints() {
+            const endpoints = [
+                'http://localhost:3000/getPoints',
+                '/api/getpoints'
+            ];
+
+            for (const url of endpoints) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    addPointsToMap(data);
+                    return;
+                } catch (error) {
+                    console.error(`Erreur lors de la récupération des points via ${url}:`, error);
+                }
+            }
         }
 
         fetchPoints();

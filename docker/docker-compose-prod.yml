@@ -47,8 +47,6 @@ services:
     volumes:
       - ../dashboard_docker:/usr/src/app
     working_dir: /usr/src/app
-    ports:
-      - "8050:8050"
 
   nodejs:
     build: ./node_image
