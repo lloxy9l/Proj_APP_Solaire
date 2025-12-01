@@ -19,7 +19,7 @@ services:
       - db_data:/var/lib/mysql
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin/phpmyadmin:5.2.3-fpm-alpine
     container_name: phpmyadmin
     restart: always
     depends_on:

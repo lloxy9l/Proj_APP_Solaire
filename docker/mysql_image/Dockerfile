@@ -1,5 +1,5 @@
-# Utiliser l'image officielle MySQL comme base
-FROM mysql:latest
+# Utiliser une image MySQL plus légère/épinglée
+FROM mysql:8.0
 
 # Copier le fichier SQL pour initialiser la base de données
 COPY ./projet_solarx.sql /docker-entrypoint-initdb.d/

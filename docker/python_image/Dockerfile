@@ -1,10 +1,12 @@
-FROM python:3.10
+FROM python:3.10-slim
 
-# Met à jour pip
-RUN pip install --upgrade pip
+WORKDIR /usr/src/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Installe les dépendances nécessaires
-RUN pip install dash dash-bootstrap-components plotly mysql-connector-python pandas google-genai
+# Met à jour pip et installe les dépendances (sans cache) pour alléger l'image
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir dash dash-bootstrap-components plotly mysql-connector-python pandas google-genai
 
-# Lancement de ton application Python (par exemple un fichier dashboard.py)
+# Lancement de l'application (le code est monté via docker-compose)
 CMD ["python", "dashboard.py"]
