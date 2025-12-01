@@ -29,8 +29,6 @@ services:
       PMA_HOST: db
       MYSQL_ROOT_PASSWORD: rootpassword
       UPLOAD_LIMIT: 100M
-    ports:
-      - "80:80"
 
   python_app:
     build: ./python_image
@@ -59,8 +57,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "3000:3000"
 
 volumes:
   db_data:
