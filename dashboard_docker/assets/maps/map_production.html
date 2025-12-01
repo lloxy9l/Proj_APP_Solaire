@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+
     <style>
         body {
             margin: 0;
@@ -19,6 +20,7 @@
             cursor: url('assets/img/panneau.png') 4 12, crosshair;
         }
 
+        /* TITRE */
         h1 {
             position: absolute;
             top: 10px;
@@ -32,6 +34,7 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
+        /* LÉGENDE */
         .legend {
             position: absolute;
             bottom: 30px;
@@ -39,145 +42,363 @@
             background: white;
             padding: 20px;
             border-radius: 10px;
-            font-size: 20px; /* Encore plus grand */
+            font-size: 20px;
             line-height: 28px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
             z-index: 1000;
         }
 
         .legend i {
-            width: 30px;   /* plus large */
-            height: 18px;  /* plus haut */
+            width: 30px;
+            height: 18px;
             float: left;
             margin-right: 12px;
             opacity: 0.9;
             border: 1px solid #555;
         }
+
+        /* MODAL PLEIN ÉCRAN */
+        #comparison-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;          /* caché par défaut */
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        #comparison-window {
+            background: #f8f9fa;
+            width: 90%;
+            max-width: 1100px;
+            max-height: 90vh;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #comparison-header {
+            background: #343a40;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #comparison-body {
+            padding: 15px 20px 20px 20px;
+            overflow-y: auto;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .flex-col {
+            flex: 1 1 300px;
+        }
+
+        table.comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        table.comparison-table th,
+        table.comparison-table td {
+            padding: 8px;
+        }
+
+        table.comparison-table th {
+            text-align: left;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Carte de la Production</h1>
-    <div id="map"></div>
-    <div class="legend">
-        <strong>Légende (kWh)</strong><br>
-        <i style="background:#006400"></i> 4000+<br>
-        <i style="background:#32CD32"></i> 3900 – 4000<br>
-        <i style="background:#FFFF00"></i> 3700 – 3900<br>
-        <i style="background:#FFA500"></i> 3500 – 3700<br>
-        <i style="background:#FF4500"></i> 3200 – 3500<br>
-        <i style="background:#FF0000"></i> < 3200<br>
-    </div>     
+<h1>Carte de la Production</h1>
 
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
-    <script>
-        const map = L.map('map').setView([46.2044, 6.1432], 9);
+<div id="map"></div>
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+<!-- 🔹 LÉGENDE -->
+<div class="legend">
+    <strong>Légende (kWh)</strong><br>
+    <i style="background:#006400"></i> 4000+<br>
+    <i style="background:#32CD32"></i> 3900 – 4000<br>
+    <i style="background:#FFFF00"></i> 3700 – 3900<br>
+    <i style="background:#FFA500"></i> 3500 – 3700<br>
+    <i style="background:#FF4500"></i> 3200 – 3500<br>
+    <i style="background:#FF0000"></i> < 3200<br>
+</div>
 
-        // Fonction pour obtenir la couleur en fonction de la production
-        function getColor(production) {
-            if (production >= 4000) return "#006400";  // Vert pour la production élevée
-            else if (production >= 3900) return "#32CD32";  // Vert clair
-            else if (production >= 3700) return "#FFFF00";  // Jaune
-            else if (production >= 3500) return "#FFA500";  // Orange
-            else if (production >= 3200) return "#FF4500";  // Orange rougeâtre
-            else return "#FF0000";  // Rouge pour la production faible
+<!-- 🔷 MODAL FULLSCREEN DE COMPARAISON -->
+<div id="comparison-modal">
+    <div id="comparison-window">
+        <div id="comparison-header">
+            <h2 style="margin:0; font-size:22px;">🔍 Comparaison des deux points</h2>
+            <button class="close-btn" onclick="closeComparisonModal()">❌</button>
+        </div>
+        <div id="comparison-body">
+            <div id="comparison-info" class="card">
+                Sélectionnez deux points sur la carte…
+            </div>
+
+           <div class="flex-col card" style="height:330px;">
+    <h3 style="margin-top:0;">📊 Production actuelle vs 2035</h3>
+    <div style="height:250px;">
+        <canvas id="prodChart"></canvas>
+    </div>
+</div>
+
+<div class="flex-col card" style="height:330px;">
+    <h3 style="margin-top:0;">📈 Variation (%)</h3>
+    <div style="height:250px;">
+        <canvas id="variationChart"></canvas>
+    </div>
+</div>
+
+
+            <div id="comparison-table-container" class="card"></div>
+            <div id="comparison-summary" class="card"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+<!-- Chart.js pour les graphes -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+/* =============================
+      INITIALISATION MAP
+   ============================= */
+const map = L.map('map').setView([46.2044, 6.1432], 9);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+function getColor(prod) {
+    if (prod >= 4000) return "#006400";
+    else if (prod >= 3800) return "#32CD32";
+    else if (prod >= 3600) return "#FFFF00";
+    else if (prod >= 3400) return "#FFA500";
+    else if (prod >= 3200) return "#FF4500";
+    else return "#FF0000";
+}
+
+const markers = L.markerClusterGroup();
+let selectedPoints = [];
+
+// graphiques globaux pour pouvoir les détruire avant de recréer
+let prodChartInstance = null;
+let variationChartInstance = null;
+
+/* =============================
+      MODAL : OUVERTURE / FERMETURE
+   ============================= */
+function openComparisonModal() {
+    document.getElementById("comparison-modal").style.display = "flex";
+}
+
+function closeComparisonModal() {
+    document.getElementById("comparison-modal").style.display = "none";
+}
+
+/* =============================
+      SÉLECTION DES POINTS
+   ============================= */
+function handlePointSelection(point) {
+    selectedPoints.push(point);
+
+    if (selectedPoints.length === 2) {
+        showComparison(selectedPoints[0], selectedPoints[1]);
+        selectedPoints = [];  // reset pour nouvelle comparaison
+    }
+}
+
+/* =============================
+      AFFICHAGE DE COMPARAISON
+   ============================= */
+function showComparison(p1, p2) {
+    // ---- Infos des points ----
+    const infoHtml = `
+        <h3 style="margin-top:0;">📍 Points sélectionnés</h3>
+        <p><b>Point 1 :</b> lat ${p1.lat.toFixed(4)}, lon ${p1.lon.toFixed(4)}</p>
+        <p><b>Point 2 :</b> lat ${p2.lat.toFixed(4)}, lon ${p2.lon.toFixed(4)}</p>
+    `;
+    document.getElementById("comparison-info").innerHTML = infoHtml;
+
+    // ---- Tableau détaillé ----
+    const tableHtml = `
+        <h3 style="margin-top:0;">📊 Détails numériques</h3>
+        <table class="comparison-table">
+            <tr>
+                <th>Indicateur</th>
+                <th style="text-align:right;">Point 1</th>
+                <th style="text-align:right;">Point 2</th>
+            </tr>
+            <tr style="background:#f1f1f1;">
+                <td>Production actuelle (kWh)</td>
+                <td style="text-align:right;">${p1.prodNow}</td>
+                <td style="text-align:right;">${p2.prodNow}</td>
+            </tr>
+            <tr>
+                <td>Production 2035 (kWh)</td>
+                <td style="text-align:right;">${p1.prodFuture}</td>
+                <td style="text-align:right;">${p2.prodFuture}</td>
+            </tr>
+            <tr style="background:#f1f1f1;">
+                <td>Évolution (%)</td>
+                <td style="text-align:right;">${p1.variation}%</td>
+                <td style="text-align:right;">${p2.variation}%</td>
+            </tr>
+        </table>
+    `;
+    document.getElementById("comparison-table-container").innerHTML = tableHtml;
+
+    // ---- Résumé automatique ----
+    const diffNow = p1.prodNow - p2.prodNow;
+    const meilleurActuel = diffNow > 0 ? "Point 1" : (diffNow < 0 ? "Point 2" : "Les deux points sont équivalents");
+    const absDiffNow = Math.abs(diffNow);
+    const summaryHtml = `
+        <h3 style="margin-top:0;">📈 Résumé</h3>
+        <p><b>Production actuelle :</b> ${meilleurActuel} est plus performant.</p>
+        ${
+            absDiffNow > 0
+            ? `<p>Écart de production actuelle : <b>${absDiffNow.toFixed(2)} kWh</b>.</p>`
+            : `<p>Aucun écart de production actuelle.</p>`
         }
+        <p>Variation prévue : Point 1 = <b>${p1.variation}%</b>, Point 2 = <b>${p2.variation}%</b>.</p>
+    `;
+    document.getElementById("comparison-summary").innerHTML = summaryHtml;
 
-        const markers = L.markerClusterGroup({
-            iconCreateFunction: function (cluster) {
-                const markers = cluster.getAllChildMarkers();
-
-                // Calcul de la production moyenne dans le cluster
-                let sum = 0;
-                let count = 0;
-                markers.forEach(m => {
-                    let production = m.options.production;
-                    if (typeof production === "number") {
-                        sum += production;
-                        count++;
-                    }
-                });
-
-                const avg = count > 0 ? (sum / count).toFixed(1) : 0;
-                const color = getColor(avg);
-
-                // Calculer la couleur du texte en fonction de la couleur du cercle
-                let textColor = "#FFFFFF";  // Par défaut, le texte est blanc
-                if (color === "#FFFF00") {  // Jaune
-                    textColor = "#000000";  // Si la couleur est jaune, changer le texte en noir
+    // ---- Graphique 1 : Production actuelle vs 2035 ----
+    const prodCtx = document.getElementById("prodChart").getContext("2d");
+    if (prodChartInstance) {
+        prodChartInstance.destroy();
+    }
+    prodChartInstance = new Chart(prodCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Production actuelle', 'Production 2035'],
+            datasets: [
+                {
+                    label: 'Point 1',
+                    data: [p1.prodNow, p1.prodFuture],
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                },
+                {
+                    label: 'Point 2',
+                    data: [p2.prodNow, p2.prodFuture],
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)'
                 }
-
-                return L.divIcon({
-                    html: `<div style="
-                        background-color:${color};
-                        border-radius:50%;
-                        width: 40px;
-                        height: 40px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: ${textColor};
-                        font-weight: bold;
-                        border: 2px solid #fff;
-                        box-shadow: 0 0 5px rgba(0,0,0,0.4);
-                    ">${avg}</div>`,
-                    className: 'cluster-icon',
-                    iconSize: [40, 40]
-                });
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { labels: { font: { size: 12 } } }
             }
+        }
+    });
+
+    // ---- Graphique 2 : Variation ----
+    const varCtx = document.getElementById("variationChart").getContext("2d");
+    if (variationChartInstance) {
+        variationChartInstance.destroy();
+    }
+    variationChartInstance = new Chart(varCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Variation (%)'],
+            datasets: [
+                {
+                    label: 'Point 1',
+                    data: [p1.variation],
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                },
+                {
+                    label: 'Point 2',
+                    data: [p2.variation],
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+           plugins: {
+                legend: { labels: { font: { size: 12 } } }
+            }
+        }
+    });
+
+    // Ouvrir le modal
+    openComparisonModal();
+}
+
+/* =============================
+      CHARGEMENT DES POINTS
+   ============================= */
+fetch("assets/maps/production_prediction.json")
+    .then(r => r.json())
+    .then(data => {
+        data.forEach(p => {
+            const lat = p.latitude;
+            const lon = p.longitude;
+
+            const marker = L.circleMarker([lat, lon], {
+                radius: 8,
+                color: getColor(p.production_actuelle),
+                fillColor: getColor(p.production_actuelle),
+                fillOpacity: 0.8,
+                weight: 2
+            });
+
+            marker.on("click", () => {
+                handlePointSelection({
+                    lat: lat,
+                    lon: lon,
+                    prodNow: p.production_actuelle,
+                    prodFuture: p.production_2035,
+                    variation: p.variation_percent
+                });
+            });
+
+            markers.addLayer(marker);
         });
 
-        // Fonction pour récupérer les points de production
-        function fetchPoints() {
-            fetch('http://localhost:3000/getPoints')  // Assurez-vous que votre API retourne les points de production
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(point => {
-                        const lat = point.latitude;
-                        const lon = point.longitude;
-                        const irradiance = point.irradiance;  // Récupérer la valeur d'irradiance
-                        const production = irradiance * 365 * 3;  // Calcul de la production
+        map.addLayer(markers);
+    })
+    .catch(e => console.error("Erreur chargement JSON :", e));
+</script>
 
-                        const popupContent = `
-                            <b>Point GPS</b><br>
-                            Latitude : ${lat}<br>
-                            Longitude : ${lon}<br>
-                            Production : ${production.toFixed(0)} kWh
-                        `;
-
-                        const marker = L.marker([lat, lon], {
-                            icon: L.divIcon({
-                                className: 'custom-icon',
-                                html: `<div style="
-                                    background:${getColor(production)};
-                                    width: 20px;
-                                    height: 20px;
-                                    border-radius: 50%;
-                                    border: 2px solid #fff;
-                                    box-shadow: 0 0 3px rgba(0,0,0,0.5);
-                                "></div>`,
-                                iconSize: [20, 20],
-                                iconAnchor: [10, 10]
-                            }),
-                            production: production  // Ajouter la production calculée ici
-                        }).bindPopup(popupContent);
-
-                        markers.addLayer(marker);
-                    });
-
-                    map.addLayer(markers);
-                })
-                .catch(error => {
-                    console.error("Erreur lors de la récupération des points :", error);
-                });
-        }
-
-        fetchPoints();
-    </script>
 </body>
 </html>

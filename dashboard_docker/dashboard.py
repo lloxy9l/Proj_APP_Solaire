@@ -16,9 +16,20 @@ from layouts.precipitations import render_precipitations
 from layouts.optimisation import render_optimisation
 from layouts.electricite import render_electricite
 
+
 from dash import callback_context
 
+from layouts.ia_zones import initialize_default_data, search_new_region, extract_industrial_zones, get_zones_dataframe 
+from layouts.industriel import render_zones_industrielles
+from layouts.ia_prediction import predict_future_production
 
+
+
+initialize_default_data()
+zones_df = pd.read_json("assets/maps/zones_industrielles.json")
+print(f"✅ {len(zones_df)} zones industrielles chargées (fichier JSON)")
+
+# =====================================================
 host = os.environ.get("DB_HOST", "db")  # Allows deployment to override DB host/IP
 node_host = os.environ.get("NODE_HOST", "localhost")
 node_port = os.environ.get("NODE_PORT", "3000")
@@ -38,6 +49,9 @@ with open('assets/maps/map_temperature.html', 'r') as file:
 
 with open('assets/maps/map_production.html', 'r') as file:
     map_production = file.read().replace("http://localhost:3000", node_base_url)
+
+with open('assets/maps/map_zones_industrielles.html', 'r') as file:
+    map_zones_industrielles = file.read().replace("http://localhost:3000", node_base_url)
 
 
 ##########################################################################################################################################
@@ -75,6 +89,11 @@ def fetch_data():
     print("Data collected")
     return df, conso_df, data_point
 
+
+
+
+df, df_conso, data_point = fetch_data()
+df = predict_future_production(df)
 ##########################################################################################################################################
 ##########################################################################################################################################
 ######################              Conversion des données en DF pour les utiliser                       #################################
@@ -453,6 +472,17 @@ app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     suppress_callback_exceptions=True  # important avec les layouts externes
 )
+server=app.server
+
+@server.route("/updateRegion", methods=["POST"])
+def update_region():
+    """Met à jour les zones industrielles selon la région demandée."""
+    data = request.json
+    region = data.get("region")
+    if not region:
+        return jsonify({"status": "error", "message": "Aucune région fournie"}), 400
+    search_new_region(region)
+    return jsonify({"status": "ok", "message": f"Carte mise à jour pour {region}"}), 200
 
 
 # Style général pour la barre latérale
@@ -529,6 +559,13 @@ vertical_header = html.Div(
                         html.Span("Température", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),  # Span pour le texte
                     ],
                     href="/temperature",
+                ),
+                html.A(
+                    children=[
+                          html.Img(src="assets/img/inds.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                          html.Span("Zones Industrielles", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                        ],
+                      href="/zones-industrielles",
                 ),
                 html.A(
                     children=[
@@ -815,7 +852,6 @@ figure_pie.update_layout(
 ######################                                HTML conteneur profile                             #################################
 ##########################################################################################################################################
 ##########################################################################################################################################
-#Profile content
 
 
 
@@ -878,6 +914,8 @@ def display_content(pathname):
         return render_electricite(fig_ratio=fig_ratio, figure_pie=figure_pie)
     elif pathname == "/optimisation":
         return render_optimisation(fig_opt=fig_opt, top_points_table=top_points_table)
+    elif pathname == "/zones-industrielles":  # ✅ Ajoutez cette ligne
+        return render_zones_industrielles(map_zones_industrielles, zones_df)  # Utilisez les bonnes variables
     else:
         return html.H1("Page non trouvée")
 
@@ -932,6 +970,7 @@ def update_menu_text_display(sidebar_width):
             html.A(children=[html.Img(src='assets/img/lightning.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Electricité', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='electricite'),
             html.A(children=[html.Img(src='assets/img/sun.png', style={'width': '40px', 'margin': '20px 10px', 'vertical-align': 'middle'}), html.Span('Optimisation', style={'margin-left': '10px', 'font-size': '18px', 'vertical-align': 'middle', 'display': 'inline', 'color': '#fff', 'font-size': '16px', 'outline': 'none'})], href='/optimisation'),
         ]
+
 from dash import callback_context
 
 @app.callback(
