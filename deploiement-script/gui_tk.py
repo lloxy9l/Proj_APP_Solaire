@@ -41,7 +41,7 @@ class FastScannerGUI(tk.Tk):
         self._queue = queue.Queue()
         self._stop_event = threading.Event()
         self._scan_thread = None
-        self.checked = set()
+        self.checked_ips = set()
         self.all_hosts = []  # liste de tous les hôtes pour la recherche
         self.available_containers = ["db", "python_app", "nodejs"]
         self.container_labels = {
@@ -161,6 +161,18 @@ class FastScannerGUI(tk.Tk):
         self.tree.bind("<Button-1>", self._toggle_check)
         self.stdout_redirect = StdoutRedirect(self.log)
 
+    def _set_tree_item_checked(self, item, checked):
+        self.tree.set(item, "check", "✓" if checked else "")
+        self.tree.item(item, tags=("checked",) if checked else ())
+
+    def _apply_checked_state_to_tree(self):
+        for item in self.tree.get_children():
+            values = self.tree.item(item)["values"]
+            if not values:
+                continue
+            ip = values[1]
+            self._set_tree_item_checked(item, ip in self.checked_ips)
+
     # ---------- Scan ----------
     def start_scan(self):
         if self._scan_thread and self._scan_thread.is_alive():
@@ -177,7 +189,7 @@ class FastScannerGUI(tk.Tk):
             return
 
         self.tree.delete(*self.tree.get_children())
-        self.checked.clear()
+        self.checked_ips.clear()
         self.all_hosts.clear()
         self._stop_event.clear()
         self.scan_btn.config(state=tk.DISABLED)
@@ -221,7 +233,9 @@ class FastScannerGUI(tk.Tk):
                 if kind == "host":
                     ip, host = val
                     self.all_hosts.append((ip, host))
-                    self.tree.insert("", tk.END, values=("", ip, host))
+                    item = self.tree.insert("", tk.END, values=("", ip, host))
+                    if ip in self.checked_ips:
+                        self._set_tree_item_checked(item, True)
                     self._sort_tree()
                 elif kind == "done":
                     self.log.insert(tk.END, f"Scan terminé — {len(val)} hôte(s) trouvés.\n")
@@ -248,60 +262,49 @@ class FastScannerGUI(tk.Tk):
                 item = self.tree.identify_row(event.y)
                 if not item:
                     return
-                if item in self.checked:
-                    self.checked.remove(item)
-                    self.tree.set(item, "check", "")
-                    self.tree.item(item, tags=())
+                values = self.tree.item(item)["values"]
+                if not values:
+                    return
+                ip = values[1]
+                if ip in self.checked_ips:
+                    self.checked_ips.remove(ip)
+                    self._set_tree_item_checked(item, False)
                 else:
-                    self.checked.add(item)
-                    self.tree.set(item, "check", "✓")
-                    self.tree.item(item, tags=("checked",))
+                    self.checked_ips.add(ip)
+                    self._set_tree_item_checked(item, True)
         self._update_selected_ips()
 
     def _select_all_hosts(self):
         for item in self.tree.get_children():
-            self.checked.add(item)
-            self.tree.set(item, "check", "✓")
-            self.tree.item(item, tags=("checked",))
+            values = self.tree.item(item)["values"]
+            if not values:
+                continue
+            ip = values[1]
+            self.checked_ips.add(ip)
+            self._set_tree_item_checked(item, True)
         self._update_selected_ips()
 
     def _clear_all_hosts(self):
-        for item in list(self.checked):
-            if self.tree.exists(item):
-                self.tree.set(item, "check", "")
-                self.tree.item(item, tags=())
-            self.checked.discard(item)
+        self.checked_ips.clear()
+        self._apply_checked_state_to_tree()
         self._update_selected_ips()
 
     def _update_selected_ips(self):
-        ips = []
-        for item in list(self.checked):
-            if self.tree.exists(item):
-                values = self.tree.item(item)["values"]
-                if values:
-                    ips.append(values[1])
-            else:
-                self.checked.discard(item)
-        self.selected_ip.set(", ".join(ips))
+        sorted_ips = sorted(
+            self.checked_ips,
+            key=lambda ip: tuple(map(int, ip.split("."))) if ip else ()
+        )
+        self.selected_ip.set(", ".join(sorted_ips))
 
     # ---------- Filtrage IP ----------
     def _filter_tree(self, *args):
         filter_text = self.search_var.get()
-        preserved_ips = set()
-        for item in list(self.checked):
-            if self.tree.exists(item):
-                values = self.tree.item(item)["values"]
-                if values:
-                    preserved_ips.add(values[1])
-        self.checked.clear()
         self.tree.delete(*self.tree.get_children())
         for ip, host in self.all_hosts:
             if filter_text in ip:
                 item = self.tree.insert("", tk.END, values=("", ip, host))
-                if ip in preserved_ips:
-                    self.checked.add(item)
-                    self.tree.set(item, "check", "✓")
-                    self.tree.item(item, tags=("checked",))
+                if ip in self.checked_ips:
+                    self._set_tree_item_checked(item, True)
         self._sort_tree()
         self._update_selected_ips()
 
@@ -364,22 +367,17 @@ class FastScannerGUI(tk.Tk):
 
     # ---------- Déploiement ----------
     def deploy(self):
-        valid_items = [item for item in self.checked if self.tree.exists(item)]
-        if not valid_items:
-            self.checked.clear()
+        available_ips = {ip for ip, _ in self.all_hosts}
+        selected_ips = [
+            ip for ip in self.checked_ips
+            if ip in available_ips
+        ]
+        if not selected_ips:
+            self.checked_ips.intersection_update(available_ips)
             self._update_selected_ips()
             messagebox.showwarning("Erreur", "Coche au moins une machine.")
             return
-        self.checked = set(valid_items)
-        selected_ips = []
-        for item in valid_items:
-            values = self.tree.item(item)["values"]
-            if values:
-                selected_ips.append(values[1])
-
-        if not selected_ips:
-            messagebox.showwarning("Erreur", "Impossible de récupérer les IP sélectionnées.")
-            return
+        selected_ips.sort(key=lambda ip: tuple(map(int, ip.split("."))))
 
         per_machine_containers = {}
         default_selection = list(self.available_containers)
