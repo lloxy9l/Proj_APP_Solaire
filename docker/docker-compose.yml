@@ -43,7 +43,7 @@ services:
         condition: service_started
     environment:
       DB_HOST: "${DB_HOST:-mysql_db}"
-      NODE_HOST: "${NODE_HOST:-nodejs}"
+      NODE_HOST: "${NODE_HOST:-localhost}"
       NODE_PORT: "${NODE_PORT:-3000}"
       GEMINI_API_KEY: "${GEMINI_API_KEY}"
     volumes:
