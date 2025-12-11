@@ -476,7 +476,7 @@ app = dash.Dash(
 )
 server=app.server
 
-@server.route("/updateRegion", methods=["POST"])
+# @server.route("/updateRegion", methods=["POST"])
 # def update_region():
 #     """Met à jour les zones industrielles selon la région demandée."""
 #     data = request.get_json()   # ⚠️ important : get_json() au lieu de request.json
