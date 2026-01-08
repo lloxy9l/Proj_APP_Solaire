@@ -55,6 +55,9 @@ with open('assets/maps/map_production.html', 'r') as file:
 with open('assets/maps/map_zones_industrielles.html', 'r') as file:
     map_zones_industrielles = file.read().replace("http://localhost:3000", node_base_url)
 
+with open('assets/maps/map_optimisation.html', 'r') as file:
+    map_optimisation = file.read().replace("http://localhost:3000", node_base_url)
+
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -223,7 +226,7 @@ opt_points["score_global"] = opt_points["score_global"].fillna(0.0)
 
 # Tri pour récupérer les meilleurs emplacements
 opt_points_sorted = opt_points.sort_values("score_global", ascending=False).reset_index(drop=True)
-top_opt_points = opt_points_sorted.head(10)
+top_opt_points = opt_points_sorted.head(5)
 
 print("Scores d'optimalité calculés pour", len(opt_points_sorted), "points GPS.")
 
@@ -812,6 +815,8 @@ for _, row in top_opt_points.iterrows():
         )
     )
 
+top_points_data = top_opt_points.to_dict("records")
+
 top_points_table = html.Table(
     [
         html.Thead(
@@ -892,6 +897,7 @@ app.layout = html.Div(
     children=[
         dcc.Store(id="sidebar-width", data="80px"),
         dcc.Store(id="chat-map-action"),
+        dcc.Store(id="opt-top-points-data", data=top_points_data),
         vertical_header,
         html.Div(
             id="main-content",
@@ -936,7 +942,7 @@ def display_content(pathname):
     elif pathname == "/electricite":
         return render_electricite(fig_ratio=fig_ratio, figure_pie=figure_pie)
     elif pathname == "/optimisation":
-        return render_optimisation(fig_opt=fig_opt, top_points_table=top_points_table)
+        return render_optimisation(fig_opt=fig_opt, top_points_data=top_points_data, map_optimisation=map_optimisation)
     elif pathname == "/zones-industrielles":  # ✅ Ajoutez cette ligne
         return render_zones_industrielles(map_zones_industrielles, zones_df)  # Utilisez les bonnes variables
     else:
@@ -1121,6 +1127,128 @@ def redirect_from_chat(chat_action):
 
 
 # Enregistrement des callbacks du chatbot
+
+# ===============================================
+# Callbacks spécifiques à la page Optimisation
+# ===============================================
+
+@app.callback(
+    [Output("opt-top-points-list", "children"), Output("opt-score-label", "children")],
+    Input("opt-score-slider", "value"),
+    State("opt-top-points-data", "data"),
+)
+def update_opt_top_points(threshold, points):
+    """Met à jour la liste des meilleurs emplacements (TOP 5)
+    en fonction du score minimum sélectionné dans le slider.
+    """
+    if not points:
+        return [html.P("Aucun point disponible.")], ""
+
+    # Filtrer les points par score
+    filtered = [p for p in points if p.get("score_global", 0) >= threshold]
+    # S'il n'y a plus rien, on garde au moins le meilleur point
+    if not filtered:
+        filtered = sorted(points, key=lambda x: x.get("score_global", 0), reverse=True)[:1]
+
+    # TOP 5, trié par score décroissant
+    filtered = sorted(filtered, key=lambda x: x.get("score_global", 0), reverse=True)[:5]
+
+    cards = []
+    for idx, p in enumerate(filtered):
+        score = float(p.get("score_global", 0))
+        adresse = p.get("adresse") or f"Point #{p.get('idpoint')}"
+        ens = p.get("ensoleillement")
+        irr = p.get("irradiance")
+        prod = p.get("production")
+        temp = p.get("temperature")
+
+        # Style spécial pour le tout premier emplacement
+        is_best = idx == 0
+
+        badge = None
+        if is_best:
+            badge = html.Span(
+                ["👑 ", html.Span("Meilleur emplacement")],
+                style={
+                    "background-color": "#FFD54F",
+                    "color": "#4A3000",
+                    "padding": "3px 10px",
+                    "border-radius": "999px",
+                    "font-size": "11px",
+                    "font-weight": "800",
+                    "margin-left": "6px",
+                    "box-shadow": "0 0 0 1px rgba(255, 193, 7, 0.65), 0 6px 16px rgba(255,193,7,0.35)",
+                },
+            )
+
+        # Style de carte par défaut
+        card_style = {
+            "margin-bottom": "10px",
+            "padding": "10px 12px",
+            "border-radius": "14px",
+            "border": "1px solid #e6ecff",
+            "background": "white",
+            "box-shadow": "0 4px 10px rgba(0,0,0,0.04)",
+        }
+
+        # Accentuation visuelle pour le meilleur emplacement
+        if is_best:
+            card_style.update(
+                {
+                    "border": "1px solid #FFB300",
+                    "background": "linear-gradient(135deg, #FFF3C4 0%, #FFFFFF 55%)",
+                    "box-shadow": "0 10px 22px rgba(255, 179, 0, 0.28)",
+                }
+            )
+
+        cards.append(
+            html.Div(
+                style=card_style,
+                children=[
+                    html.Div(
+                        style={"display": "flex", "justify-content": "space-between", "align-items": "center"},
+                        children=[
+                            html.Div(
+                                children=[
+                                    html.Div(
+                                        [html.Span(f"ID Point {int(p.get('idpoint'))}" if p.get("idpoint") is not None else "Point"), badge]
+                                        if badge
+                                        else [html.Span(f"ID Point {int(p.get('idpoint'))}" if p.get("idpoint") is not None else "Point")]
+                                    ),
+                                    html.Div(adresse, style={"font-size": "11px", "color": "#666", "margin-top": "2px"}),
+                                ],
+                            ),
+                            html.Div(
+                                style={"text-align": "right"},
+                                children=[
+                                    html.Div(f"{score:.1f} %", style={"font-weight": "800", "font-size": "16px", "color": "#00875A"}),
+                                    dbc.Progress(value=score, max=100, style={"height": "7px", "margin-top": "4px", "background-color": "#e9f3ff"}),
+                                ],
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        style={
+                            "display": "grid",
+                            "grid-template-columns": "1fr 1fr",
+                            "gap": "4px",
+                            "margin-top": "8px",
+                            "font-size": "11px",
+                            "color": "#555",
+                        },
+                        children=[
+                            html.Div([html.Strong("☀ Ensoleillement : "), html.Span(f"{ens:.1f} h/j" if ens is not None else "N/A")]),
+                            html.Div([html.Strong("⚡ Production : "), html.Span(f"{prod:.0f} kWh" if prod is not None else "N/A")]),
+                            html.Div([html.Strong("🔆 Irradiance : "), html.Span(f"{irr:.1f} kWh/m²" if irr is not None else "N/A")]),
+                            html.Div([html.Strong("🌡 Température moy. : "), html.Span(f"{temp:.1f} °C" if temp is not None else "N/A")]),
+                        ],
+                    ),
+                ],
+            )
+        )
+
+    return cards, f"{int(threshold)} %"
+
 register_chatbot_callbacks(app)
 
 

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte d'optimisation des panneaux solaires</title>
+
+    <!-- Leaflet + MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 5px;
+            border: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<!-- Leaflet + MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+
+<script>
+    // Initialisation de la carte
+    const map = L.map('map').setView([46.2, 6.1], 8);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Couleurs en fonction du score global (0-100)
+    function getColor(score) {
+        if (score >= 95) return '#2ECC71';      // excellent
+        if (score >= 85) return '#27AE60';      // très bon
+        if (score >= 70) return '#F1C40F';      // bon
+        if (score >= 50) return '#E67E22';      // moyen
+        return '#E74C3C';                       // faible
+    }
+
+    // Légende
+    const legend = L.control({position: 'bottomleft'});
+    legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = `
+            <div class="legend-title">Légende score (%)</div>
+            <div class="legend-item"><span class="legend-color" style="background:${getColor(25)}"></span>0 – 50 : faible</div>
+            <div class="legend-item"><span class="legend-color" style="background:${getColor(60)}"></span>50 – 70 : moyen</div>
+            <div class="legend-item"><span class="legend-color" style="background:${getColor(75)}"></span>70 – 85 : bon</div>
+            <div class="legend-item"><span class="legend-color" style="background:${getColor(90)}"></span>85 – 95 : très bon</div>
+            <div class="legend-item"><span class="legend-color" style="background:${getColor(97)}"></span>95 – 100 : excellent</div>
+        `;
+        return div;
+    };
+    legend.addTo(map);
+
+    // Normalisation min-max (comme dans dashboard.py)
+    function computeMinMax(values) {
+        let min = Infinity, max = -Infinity;
+        values.forEach(v => {
+            if (v == null || isNaN(v)) return;
+            if (v < min) min = v;
+            if (v > max) max = v;
+        });
+        if (!isFinite(min) || !isFinite(max) || min === max) {
+            return {min: 0, max: 0, neutral: true};
+        }
+        return {min, max, neutral: false};
+    }
+
+    function normalizeValue(v, stats) {
+        if (v == null || isNaN(v) || stats.neutral) return 0.5;
+        return (v - stats.min) / (stats.max - stats.min);
+    }
+
+    // Création des marqueurs avec calcul du score global
+    function addPointsToMap(data) {
+        if (!Array.isArray(data) || data.length === 0) {
+            console.warn("Aucun point reçu pour l'optimisation");
+            return;
+        }
+
+        // Prépare les stats pour la normalisation
+        const ensVals  = data.map(p => p.ensoleillement);
+        const irrVals  = data.map(p => p.irradiance);
+        const prodVals = data.map(p => p.production);
+        const precVals = data.map(p => p.precipitation);
+        const tempVals = data.map(p => p.temperature);
+
+        const ensStats  = computeMinMax(ensVals);
+        const irrStats  = computeMinMax(irrVals);
+        const prodStats = computeMinMax(prodVals);
+        const precStats = computeMinMax(precVals);
+        const tempStats = computeMinMax(tempVals);
+
+        const markers = L.markerClusterGroup({
+            maxClusterRadius: 40,
+            iconCreateFunction: function(cluster) {
+                const childMarkers = cluster.getAllChildMarkers();
+                let sum = 0, count = 0;
+                childMarkers.forEach(m => {
+                    if (typeof m.options.score_global === 'number') {
+                        sum += m.options.score_global;
+                        count++;
+                    }
+                });
+                const avg = count > 0 ? (sum / count) : 0;
+                const avgRounded = avg.toFixed(0);
+                const color = getColor(avg);
+
+                return L.divIcon({
+                    html: `<div style="
+                        background-color:${color};
+                        border-radius:50%;
+                        width: 40px;
+                        height: 40px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        border: 2px solid #fff;
+                        box-shadow: 0 0 5px rgba(0,0,0,0.4);
+                    ">${avgRounded}</div>`,
+                    className: 'cluster-icon',
+                    iconSize: [40, 40]
+                });
+            }
+        });
+
+        data.forEach(point => {
+            const lat = point.latitude;
+            const lon = point.longitude;
+            if (lat == null || lon == null) return;
+
+            const ens  = point.ensoleillement;
+            const irr  = point.irradiance;
+            const prod = point.production;
+            const prec = point.precipitation;
+            const temp = point.temperature;
+
+            // Normalisations
+            const normEns  = normalizeValue(ens,  ensStats);
+            const normIrr  = normalizeValue(irr,  irrStats);
+            const normProd = normalizeValue(prod, prodStats);
+            const normPrec = normalizeValue(prec, precStats);
+            const normTempDev = normalizeValue(Math.abs(temp - 20), tempStats);
+
+            // Scores partiels (0-1)
+            let scoreEns  = normEns;
+            let scoreIrr  = normIrr;
+            let scoreProd = normProd;
+            let scorePrec = 1 - normPrec;
+            let scoreTemp = 1 - normTempDev;
+
+            // Clip 0-1
+            scoreEns  = Math.min(1, Math.max(0, scoreEns));
+            scoreIrr  = Math.min(1, Math.max(0, scoreIrr));
+            scoreProd = Math.min(1, Math.max(0, scoreProd));
+            scorePrec = Math.min(1, Math.max(0, scorePrec));
+            scoreTemp = Math.min(1, Math.max(0, scoreTemp));
+
+            // Pondérations (mêmes que dashboard.py)
+            const wEns  = 0.30;
+            const wIrr  = 0.25;
+            const wProd = 0.25;
+            const wPrec = 0.10;
+            const wTemp = 0.10;
+
+            const score_global = 100 * (
+                wEns  * scoreEns  +
+                wIrr  * scoreIrr  +
+                wProd * scoreProd +
+                wPrec * scorePrec +
+                wTemp * scoreTemp
+            );
+
+            const idpoint = point.idpoint || "";
+            const adresse = point.adresse || "Adresse inconnue";
+
+            const popupContent = `
+                <b>Point GPS ${idpoint}</b><br>
+                ${adresse}<br>
+                Score global : ${score_global.toFixed(1)} %<br>
+                Ensoleillement : ${ens != null ? ens.toFixed(2) : "N/A"} h/j<br>
+                Irradiance : ${irr != null ? irr.toFixed(2) : "N/A"} kWh/m²<br>
+                Production : ${prod != null ? prod.toFixed(2) : "N/A"} kWh<br>
+                Précipitations : ${prec != null ? prec.toFixed(2) : "N/A"} mm<br>
+                Température : ${temp != null ? temp.toFixed(1) : "N/A"} °C
+            `;
+
+            const marker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                    className: 'custom-icon',
+                    html: `<div style="
+                        background:${getColor(score_global)};
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 50%;
+                        border: 2px solid #fff;
+                        box-shadow: 0 0 3px rgba(0,0,0,0.5);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        color:#ffffff;
+                        font-size:11px;
+                        font-weight:bold;
+                    ">${score_global.toFixed(0)}%</div>`,
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 17]
+                }),
+                score_global: score_global
+            }).bindPopup(popupContent);
+
+            markers.addLayer(marker);
+        });
+
+        map.addLayer(markers);
+    }
+
+    // Récupération des points depuis l'API existante /getPoints (comme ensoleillement)
+    async function fetchOptimPoints() {
+        const endpoints = [
+            'http://localhost:3000/getPoints',
+            '/api/getpoints'
+        ];
+
+        for (const url of endpoints) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                console.log("Points reçus pour optimisation :", data.length);
+                addPointsToMap(data);
+                return;
+            } catch (error) {
+                console.error(`Erreur lors de la récupération des points via ${url}:`, error);
+            }
+        }
+    }
+
+    fetchOptimPoints();
+</script>
+</body>
+</html>
