@@ -25,12 +25,15 @@ from layouts.ia_prediction import predict_future_production
 
 
 from flask import request, jsonify
+from metrics import metrics_endpoint, track_page_view, update_zones_count
 
 initialize_default_data()
 # zones_df = pd.read_json("assets/maps/zones_industrielles.json")
 zones_df = load_zones_from_db()
 # print(f"✅ {len(zones_df)} zones industrielles chargées (fichier JSON)")
 print(f"📦 {len(zones_df)} zones chargées depuis MySQL.")
+# Mettre à jour la métrique Prometheus
+update_zones_count(len(zones_df))
 # =====================================================
 host = os.environ.get("DB_HOST", "db")  # Allows deployment to override DB host/IP
 node_host = os.environ.get("NODE_HOST", "localhost")
@@ -478,6 +481,12 @@ app = dash.Dash(
     suppress_callback_exceptions=True  # important avec les layouts externes
 )
 server=app.server
+
+# ===== Endpoint Prometheus pour exposer les métriques =====
+@server.route('/metrics')
+def metrics():
+    """Endpoint pour Prometheus - expose les métriques de l'application"""
+    return metrics_endpoint()
 
 # @server.route("/updateRegion", methods=["POST"])
 # def update_region():
@@ -929,6 +938,10 @@ app.layout = html.Div(
     Input('url', 'pathname')
 )
 def display_content(pathname):
+    # Tracker les vues de pages pour Prometheus
+    page_name = pathname.strip('/') or 'home'
+    track_page_view(page_name)
+    
     if pathname == '/':
         return render_main_content(global_means=global_means, map_production=map_production)
     elif pathname == "/home":
