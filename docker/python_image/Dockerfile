@@ -33,7 +33,8 @@ RUN pip install --no-cache-dir \
     pyproj==3.6.1 \
     rtree==1.1.0 \
     google-genai \
-    flask
+    flask \
+    prometheus-client
     
 
 # Définir le répertoire de travail
