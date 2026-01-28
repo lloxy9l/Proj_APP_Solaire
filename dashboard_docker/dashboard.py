@@ -15,6 +15,7 @@ from layouts.temperature import render_temperature
 from layouts.precipitations import render_precipitations
 from layouts.optimisation import render_optimisation
 from layouts.electricite import render_electricite
+from layouts.prediction import render_prediction
 
 
 from dash import callback_context
@@ -640,6 +641,24 @@ vertical_header = html.Div(
                     ],
                     href="/optimisation",
                 ),
+                html.A(
+                    children=[
+                        html.Img(
+                            src="assets/img/prediction.png",  
+                            style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
+                        ),
+                        html.Span(
+                            "Prédiction",
+                            style={
+                                "margin-left": "10px",
+                                "font-size": "14px",
+                                "vertical-align": "middle",
+                                "display": "none",
+                            },
+                        ),
+                    ],
+                    href="/prediction",
+                ),
             ]
         ),
         
@@ -956,8 +975,10 @@ def display_content(pathname):
         return render_electricite(fig_ratio=fig_ratio, figure_pie=figure_pie)
     elif pathname == "/optimisation":
         return render_optimisation(fig_opt=fig_opt, top_points_data=top_points_data, map_optimisation=map_optimisation)
-    elif pathname == "/zones-industrielles":  # ✅ Ajoutez cette ligne
-        return render_zones_industrielles(map_zones_industrielles, zones_df)  # Utilisez les bonnes variables
+    elif pathname == "/zones-industrielles": 
+        return render_zones_industrielles(map_zones_industrielles, zones_df) 
+    elif pathname == "/prediction":
+        return render_prediction()    
     else:
         return html.H1("Page non trouvée")
 
