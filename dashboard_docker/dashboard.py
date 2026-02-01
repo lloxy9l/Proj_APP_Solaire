@@ -15,7 +15,7 @@ from layouts.temperature import render_temperature
 from layouts.precipitations import render_precipitations
 from layouts.optimisation import render_optimisation
 from layouts.electricite import render_electricite
-from layouts.prediction import render_prediction
+from layouts.prediction import render_prediction, register_prediction_callbacks
 
 
 from dash import callback_context
@@ -1284,6 +1284,7 @@ def update_opt_top_points(threshold, points):
     return cards, f"{int(threshold)} %"
 
 register_chatbot_callbacks(app)
+register_prediction_callbacks(app)
 
 
 # Exécution de l'application

@@ -13,10 +13,20 @@ RUN apt-get update && apt-get install -y \
     libproj-dev \
     gcc \
     g++ \
+    python3-dev \
+    build-essential \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Met à jour pip
 RUN pip install --upgrade pip
+
+# Installation de Prophet
+RUN pip install --no-cache-dir \
+    numpy \
+    pandas==2.1.3 \
+    cmdstanpy==1.2.4 \
+    prophet==1.1.6
 
 # Installation des dépendances Python (toutes les dépendances fusionnées)
 RUN pip install --no-cache-dir \
@@ -24,8 +34,6 @@ RUN pip install --no-cache-dir \
     dash-bootstrap-components==1.5.0 \
     plotly==5.18.0 \
     mysql-connector-python==8.2.0 \
-    pandas==2.1.3 \
-    numpy \
     geopandas==0.14.1 \
     osmnx==1.8.1 \
     scikit-learn==1.3.2 \
@@ -34,7 +42,8 @@ RUN pip install --no-cache-dir \
     rtree==1.1.0 \
     google-genai \
     flask \
-    prometheus-client
+    prometheus-client 
+
     
 
 # Définir le répertoire de travail
