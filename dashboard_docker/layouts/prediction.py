@@ -15,7 +15,7 @@ from layouts.prediction_prophet import (
 import time
 import threading
 
-# 🔧 FIX: Variable globale pour suivre l'état des prédictions
+# Variable globale pour suivre l'état des prédictions
 prediction_status_global = {
     'running': False,
     'completed': False,
@@ -26,34 +26,80 @@ prediction_status_global = {
 }
 
 def render_prediction():
-    """Rendu de la page Prediction avec Prophet"""
+    """Rendu moderne de la page Prediction avec Prophet"""
     
     return html.Div(
-        style={"padding": "20px", "height": "100%"},
+        style={
+            "padding": "30px",
+            "minHeight": "100vh"
+        },
         children=[
-            # Header
-            html.H1(
-                "🔮 Prédictions Météo avec Intelligence Artificielle",
-                style={
+            # Container centré pour éviter la barre latérale
+            html.Div(style={
+                "maxWidth": "1400px",
+                "margin": "0 auto",
+                "paddingLeft": "20px",
+                "paddingRight": "20px"
+            }, children=[
+            # Header avec design moderne
+            html.Div([
+                html.Div([
+                    html.H1(
+                        "Prédictions Météo IA",
+                        style={
+                            "color": "black",
+                            "marginBottom": "10px",
+                            "fontSize": "3rem",
+                            "fontWeight": "700",
+                            "textShadow": "2px 2px 4px rgba(0,0,0,0.2)"
+                        }
+                    ),
+                    html.P(
+                        "Intelligence Artificielle Prophet",
+                        style={
+                            "color": "black",
+                            "fontSize": "1.1rem",
+                            "marginBottom": "0"
+                        }
+                    ),
+                ], style={
                     "textAlign": "center",
-                    "color": "#005dff",
-                    "marginBottom": "10px"
-                }
-            ),
-            html.P(
-                "Prédictions basées sur Prophet (Facebook) avec saisonnalité complète",
-                style={"textAlign": "center", "color": "#666", "marginBottom": "30px"}
-            ),
+                    "marginBottom": "40px"
+                }),
+            ]),
             
-            # Section contrôle
-            dbc.Card(
+            # Section Configuration - Card moderne
+            dbc.Card([
                 dbc.CardBody([
-                    html.H4("Configuration des prédictions", className="card-title"),
+                    html.Div([
+                        html.I(className="fas fa-cog", style={
+                            "fontSize": "24px",
+                            "color": "#667eea",
+                            "marginRight": "12px"
+                        }),
+                        html.H4("Configuration des prédictions", style={
+                            "display": "inline-block",
+                            "color": "#2d3748",
+                            "fontWeight": "600",
+                            "marginBottom": "0"
+                        })
+                    ], style={"marginBottom": "25px"}),
                     
                     dbc.Row([
                         # Période de prédiction
                         dbc.Col([
-                            html.Label("Période à prédire:", style={"fontWeight": "bold"}),
+                            html.Label([
+                                html.I(className="fas fa-calendar-alt", style={
+                                    "marginRight": "8px",
+                                    "color": "#667eea"
+                                }),
+                                "Période à prédire"
+                            ], style={
+                                "fontWeight": "600",
+                                "color": "#4a5568",
+                                "marginBottom": "10px",
+                                "display": "block"
+                            }),
                             dcc.Dropdown(
                                 id="dropdown-period-prediction",
                                 options=[
@@ -66,79 +112,178 @@ def render_prediction():
                                 ],
                                 value="1_year",
                                 clearable=False,
-                                style={"marginBottom": "15px"}
+                                style={
+                                    "marginBottom": "15px",
+                                    "borderRadius": "8px",
+                                    "fontSize": "16px"
+                                }
                             ),
-                        ], width=4),
+                        ], lg=4, md=12),
                         
                         # Boutons d'action
                         dbc.Col([
-                            html.Label("Actions:", style={"fontWeight": "bold"}),
+                            html.Label([
+                                html.I(className="fas fa-play-circle", style={
+                                    "marginRight": "8px",
+                                    "color": "#667eea"
+                                }),
+                                "Actions"
+                            ], style={
+                                "fontWeight": "600",
+                                "color": "#4a5568",
+                                "marginBottom": "10px",
+                                "display": "block"
+                            }),
                             html.Div([
-                                dbc.Button(
-                                    "Lancer les prédictions",
+                                dbc.Button([
+                                    html.I(className="fas fa-rocket", style={"marginRight": "8px"}),
+                                    "Lancer les prédictions"
+                                ],
                                     id="btn-launch-predictions",
                                     color="primary",
                                     size="lg",
-                                    style={"marginRight": "10px"}
+                                    style={
+                                        "marginRight": "10px",
+                                        "borderRadius": "10px",
+                                        "fontWeight": "600",
+                                        "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+                                        "transition": "all 0.3s"
+                                    }
                                 ),
-                                dbc.Button(
-                                    "⏸️ Stop",
+                                dbc.Button([
+                                    html.I(className="fas fa-stop-circle", style={"marginRight": "8px"}),
+                                    "Arrêter"
+                                ],
                                     id="btn-stop-predictions",
                                     color="warning",
                                     size="lg",
-                                    style={"marginRight": "10px", "display": "none"}
+                                    style={
+                                        "marginRight": "10px",
+                                        "display": "none",
+                                        "borderRadius": "10px",
+                                        "fontWeight": "600",
+                                        "boxShadow": "0 4px 6px rgba(0,0,0,0.1)"
+                                    }
                                 ),
-                                dbc.Button(
-                                    "Effacer",
+                                dbc.Button([
+                                    html.I(className="fas fa-trash-alt", style={"marginRight": "8px"}),
+                                    "Effacer tout"
+                                ],
                                     id="btn-clear-predictions",
                                     color="danger",
                                     size="lg",
-                                    outline=True
+                                    outline=True,
+                                    style={
+                                        "borderRadius": "10px",
+                                        "fontWeight": "600",
+                                        "boxShadow": "0 4px 6px rgba(0,0,0,0.1)"
+                                    }
                                 ),
                             ]),
-                        ], width=8),
-                    ]),
+                        ], lg=8, md=12),
+                    ], className="mb-3"),
                     
-                    # Status bar
+                    # Status bar moderne
                     html.Div(
                         id="prediction-status",
                         style={
-                            "marginTop": "20px",
-                            "padding": "15px",
-                            "backgroundColor": "#f8f9fa",
-                            "borderRadius": "8px",
-                            "minHeight": "60px"
+                            "marginTop": "25px",
+                            "padding": "20px",
+                            "background": "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+                            "borderRadius": "12px",
+                            "minHeight": "80px",
+                            "boxShadow": "inset 0 2px 4px rgba(0,0,0,0.06)",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center"
                         }
                     ),
                     
-                    # Barre de progression
-                    dbc.Progress(
-                        id="prediction-progress",
-                        value=0,
-                        striped=True,
-                        animated=True,
-                        style={"marginTop": "10px", "height": "25px", "display": "none"}
-                    ),
+                    # Barre de progression moderne
+                    html.Div([
+                        dbc.Progress(
+                            id="prediction-progress",
+                            value=0,
+                            striped=True,
+                            animated=True,
+                            style={
+                                "height": "30px",
+                                "borderRadius": "15px",
+                                "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
+                            },
+                            className="mb-0"
+                        ),
+                    ], style={
+                        "marginTop": "15px",
+                        "display": "none"
+                    }, id="progress-container"),
                 ]),
-                style={"marginBottom": "30px"}
-            ),
+            ], style={
+                "marginBottom": "30px",
+                "borderRadius": "15px",
+                "border": "none",
+                "boxShadow": "0 10px 30px rgba(0,0,0,0.15)"
+            }),
             
-            # Section visualisation
-            dbc.Card(
+            # Section Visualisation - Card moderne
+            dbc.Card([
                 dbc.CardBody([
-                    html.H4("Visualisation des prédictions", className="card-title"),
+                    html.Div([
+                        html.I(className="fas fa-chart-line", style={
+                            "fontSize": "24px",
+                            "color": "#667eea",
+                            "marginRight": "12px"
+                        }),
+                        html.H4("Visualisation des prédictions", style={
+                            "display": "inline-block",
+                            "color": "#2d3748",
+                            "fontWeight": "600",
+                            "marginBottom": "0"
+                        })
+                    ], style={"marginBottom": "25px"}),
                     
                     dbc.Row([
                         dbc.Col([
-                            html.Label(" Sélectionner un point GPS:", style={"fontWeight": "bold"}),
+                            html.Label([
+                                html.I(className="fas fa-map-marker-alt", style={
+                                    "marginRight": "8px",
+                                    "color": "#667eea"
+                                }),
+                                "Point GPS"
+                            ], style={
+                                "fontWeight": "600",
+                                "color": "#4a5568",
+                                "marginBottom": "10px",
+                                "display": "block"
+                            }),
+                            # Dropdown amélioré avec recherche
                             dcc.Dropdown(
                                 id="dropdown-point-prediction",
-                                placeholder="Choisir un point GPS...",
-                                style={"marginBottom": "15px"}
+                                placeholder="🔍 Rechercher un point GPS...",
+                                searchable=True,
+                                style={
+                                    "marginBottom": "15px",
+                                    "fontSize": "15px"
+                                },
+                                # Style pour éviter le chevauchement
+                                optionHeight=50,
+                                maxHeight=300,
                             ),
-                        ], width=6),
+                        ], lg=6, md=12),
+                        
                         dbc.Col([
-                            html.Label("Variable à afficher:", style={"fontWeight": "bold"}),
+                            html.Label([
+                                html.I(className="fas fa-thermometer-half", style={
+                                    "marginRight": "8px",
+                                    "color": "#667eea"
+                                }),
+                                "Variable à afficher"
+                            ], style={
+                                "fontWeight": "600",
+                                "color": "#4a5568",
+                                "marginBottom": "10px",
+                                "display": "block"
+                            }),
                             dcc.Dropdown(
                                 id="dropdown-variable-prediction",
                                 options=[
@@ -149,45 +294,69 @@ def render_prediction():
                                 ],
                                 value="temperature",
                                 clearable=False,
-                                style={"marginBottom": "15px"}
+                                style={
+                                    "marginBottom": "15px",
+                                    "fontSize": "15px"
+                                }
                             ),
-                        ], width=6),
+                        ], lg=6, md=12),
                     ]),
                     
-                    # Graphique
-                    dcc.Loading(
-                        id="loading-graph",
-                        type="default",
-                        children=[
-                            dcc.Graph(
-                                id="graph-predictions",
-                                style={"height": "600px"}
-                            )
-                        ]
-                    ),
+                    # Graphique avec loading moderne
+                    html.Div([
+                        dcc.Loading(
+                            id="loading-graph",
+                            type="default",
+                            color="#667eea",
+                            children=[
+                                dcc.Graph(
+                                    id="graph-predictions",
+                                    style={
+                                        "height": "650px",
+                                        "borderRadius": "12px",
+                                        "overflow": "hidden"
+                                    },
+                                    config={
+                                        'displayModeBar': True,
+                                        'displaylogo': False,
+                                        'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d']
+                                    }
+                                )
+                            ]
+                        ),
+                    ], style={
+                        "marginTop": "20px",
+                        "borderRadius": "12px",
+                        "overflow": "hidden",
+                        "boxShadow": "0 4px 6px rgba(0,0,0,0.07)"
+                    }),
                 ]),
-            ),
+            ], style={
+                "borderRadius": "15px",
+                "border": "none",
+                "boxShadow": "0 10px 30px rgba(0,0,0,0.15)"
+            }),
             
             # Stores pour les données
             dcc.Store(id="store-predictions-ready", data=False),
             dcc.Store(id="store-prediction-trigger", data=0),
             dcc.Store(id="store-prediction-running", data=False),
             
-            # 🔧 FIX: Interval pour surveiller l'état des prédictions
+            # Intervals
             dcc.Interval(
                 id="interval-check-status",
-                interval=1000,  # Vérifier toutes les secondes
+                interval=1000,
                 n_intervals=0,
                 disabled=True
             ),
             
-            # Interval pour mise à jour graphique
             dcc.Interval(
                 id="interval-update-graph",
                 interval=3000,
                 n_intervals=0,
                 disabled=True
             ),
+            ]),  # Fin du container centré
         ],
     )
 
@@ -208,46 +377,94 @@ def register_prediction_callbacks(app):
         """Initialize la page au chargement"""
         
         points = get_all_points()
-        options = [{"label": f" Point {p['idpoint']} - {p['adresse']}", "value": p['idpoint']} for p in points]
-        default_point = points[0]['idpoint'] if points else None
         
+        # Formatage amélioré des options avec emojis et meilleure lisibilité
+        options = []
+        for p in points:
+            # Créer un label formaté avec l'ID et l'adresse
+            label = f"📍 Point {p['idpoint']} - {p['adresse'][:50]}{'...' if len(p['adresse']) > 50 else ''}"
+            options.append({
+                "label": label,
+                "value": p['idpoint']
+            })
+        
+        # Vérifier si des prédictions existent
         has_predictions = check_predictions_exist()
         
         if has_predictions:
             status = html.Div([
-                html.I(className="fas fa-check-circle", style={"color": "green", "fontSize": "24px"}),
-                html.Span(
-                    " Des prédictions sont disponibles. Sélectionnez un point pour les visualiser.",
-                    style={"marginLeft": "10px", "color": "green", "fontSize": "16px"}
-                )
-            ])
+                html.I(className="fas fa-check-circle", style={
+                    "color": "#48bb78",
+                    "fontSize": "28px",
+                    "marginRight": "12px"
+                }),
+                html.Span([
+                    "Des prédictions sont disponibles ! ",
+                    html.Strong("Sélectionnez un point GPS pour visualiser.")
+                ], style={
+                    "color": "#2d3748",
+                    "fontSize": "17px",
+                    "fontWeight": "500"
+                })
+            ], style={
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center"
+            })
+            first_point = options[0]['value'] if options else None
         else:
             status = html.Div([
-                html.I(className="fas fa-info-circle", style={"color": "#005dff", "fontSize": "24px"}),
-                html.Span(
-                    " Aucune prédiction disponible. Lancez une prédiction pour commencer.",
-                    style={"marginLeft": "10px", "color": "#666", "fontSize": "16px"}
-                )
-            ])
+                html.I(className="fas fa-info-circle", style={
+                    "color": "#4299e1",
+                    "fontSize": "28px",
+                    "marginRight": "12px"
+                }),
+                html.Span([
+                    "Aucune prédiction disponible. ",
+                    html.Strong("Cliquez sur 'Lancer les prédictions' pour commencer.")
+                ], style={
+                    "color": "#2d3748",
+                    "fontSize": "17px",
+                    "fontWeight": "500"
+                })
+            ], style={
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center"
+            })
+            first_point = None
         
-        fig = go.Figure()
-        fig.update_layout(
-            title="Sélectionnez un point GPS pour voir les prédictions",
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
             template="plotly_white",
-            height=600
+            xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+            yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+            annotations=[
+                dict(
+                    text="Sélectionnez un point GPS pour afficher les prédictions",
+                    xref="paper",
+                    yref="paper",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False,
+                    font=dict(size=20, color="#a0aec0")
+                )
+            ],
+            height=650,
+            plot_bgcolor='#f7fafc'
         )
         
-        return options, default_point, status, fig
+        return options, first_point, status, empty_fig
     
-    # Callback principal pour lancer les prédictions
+    # Callback pour lancer les prédictions
     @app.callback(
         [Output("prediction-status", "children", allow_duplicate=True),
-         Output("interval-check-status", "disabled"),
-         Output("interval-update-graph", "disabled"),
-         Output("prediction-progress", "style"),
-         Output("btn-launch-predictions", "style"),
-         Output("btn-stop-predictions", "style"),
-         Output("store-prediction-running", "data")],
+         Output("interval-check-status", "disabled", allow_duplicate=True),
+         Output("interval-update-graph", "disabled", allow_duplicate=True),
+         Output("progress-container", "style", allow_duplicate=True),
+         Output("btn-launch-predictions", "style", allow_duplicate=True),
+         Output("btn-stop-predictions", "style", allow_duplicate=True),
+         Output("store-prediction-running", "data", allow_duplicate=True)],
         Input("btn-launch-predictions", "n_clicks"),
         State("dropdown-period-prediction", "value"),
         prevent_initial_call=True
@@ -258,62 +475,55 @@ def register_prediction_callbacks(app):
         
         global prediction_status_global
         
-        # Réinitialiser le statut
-        prediction_status_global = {
-            'running': True,
-            'completed': False,
-            'progress': 0,
-            'total': len(get_all_points()),
-            'current': 0,
-            'message': 'Démarrage des prédictions...'
-        }
-        
-        # Callback pour mise à jour du statut
-        def status_callback(idpoint, status_type, message):
-            prediction_status_global['message'] = message
-            if status_type == "processing":
-                prediction_status_global['current'] = idpoint
-            elif status_type == "success":
-                prediction_status_global['progress'] = prediction_status_global['current']
-        
-        # Lancer dans un thread
+        # Lancer dans un thread séparé
         def run_predictions():
-            try:
-                predict_for_all_points(period, status_callback)
-            finally:
-                # ✅ FIX: Marquer comme terminé quand le thread se termine
-                prediction_status_global['running'] = False
-                prediction_status_global['completed'] = True
-                print("✅ Thread de prédictions terminé")
+            global prediction_status_global
+            prediction_status_global['running'] = True
+            prediction_status_global['completed'] = False
+            
+            def update_callback(idpoint, status, message):
+                prediction_status_global['message'] = f"Point {idpoint}: {message}" if idpoint else message
+            
+            predict_for_all_points(period=period, callback=update_callback)
+            
+            prediction_status_global['running'] = False
+            prediction_status_global['completed'] = True
         
         thread = threading.Thread(target=run_predictions, daemon=True)
         thread.start()
         
         status = html.Div([
-            html.I(className="fas fa-spinner fa-spin", style={"color": "#005dff", "fontSize": "24px"}),
-            html.Span(
-                f" 🚀 Lancement des prédictions pour {prediction_status_global['total']} points...",
-                style={"marginLeft": "10px", "color": "#005dff", "fontSize": "16px"}
-            )
+            html.Div([
+                html.I(className="fas fa-spinner fa-spin", style={
+                    "color": "#667eea",
+                    "fontSize": "28px",
+                    "marginRight": "12px"
+                }),
+                html.Span(
+                    "Génération des prédictions en cours...",
+                    style={
+                        "color": "#2d3748",
+                        "fontSize": "17px",
+                        "fontWeight": "500"
+                    }
+                )
+            ], style={
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center"
+            })
         ])
         
-        progress_style = {"marginTop": "10px", "height": "25px", "display": "block"}
-        launch_btn_style = {"marginRight": "10px", "display": "none"}
-        stop_btn_style = {"marginRight": "10px", "display": "inline-block"}
+        progress_style = {"marginTop": "15px", "display": "block"}
+        launch_btn_style = {"marginRight": "10px", "display": "none", "borderRadius": "10px", "fontWeight": "600"}
+        stop_btn_style = {"marginRight": "10px", "display": "inline-block", "borderRadius": "10px", "fontWeight": "600"}
         
-        # ✅ Activer les deux intervals
         return status, False, False, progress_style, launch_btn_style, stop_btn_style, True
     
-    # ✅ FIX: Callback pour surveiller l'état et DÉSACTIVER les intervals quand terminé
+    # Callback pour surveiller l'état
     @app.callback(
         [Output("prediction-status", "children", allow_duplicate=True),
-         Output("prediction-progress", "value"),
-         Output("prediction-progress", "label"),
-         Output("interval-check-status", "disabled", allow_duplicate=True),
-         Output("interval-update-graph", "disabled", allow_duplicate=True),
-         Output("btn-launch-predictions", "style", allow_duplicate=True),
-         Output("btn-stop-predictions", "style", allow_duplicate=True),
-         Output("store-prediction-running", "data", allow_duplicate=True)],
+         Output("prediction-progress", "value", allow_duplicate=True)],
         Input("interval-check-status", "n_intervals"),
         State("store-prediction-running", "data"),
         prevent_initial_call=True
@@ -321,51 +531,62 @@ def register_prediction_callbacks(app):
     def check_prediction_status(n_intervals, is_running):
         global prediction_status_global
         
-        # Si les prédictions ne tournent pas, ne rien faire
-        if not is_running or not prediction_status_global['running']:
-            # ✅ FIX: Si terminé, désactiver les intervals
-            if prediction_status_global.get('completed', False):
-                status = html.Div([
-                    html.I(className="fas fa-check-circle", style={"color": "green", "fontSize": "24px"}),
-                    html.Span(
-                        f" ✅ Prédictions terminées ! {prediction_status_global['progress']}/{prediction_status_global['total']} points traités.",
-                        style={"marginLeft": "10px", "color": "green", "fontSize": "16px"}
-                    )
-                ])
-                
-                launch_btn_style = {"marginRight": "10px", "display": "inline-block"}
-                stop_btn_style = {"marginRight": "10px", "display": "none"}
-                
-                # ✅ DÉSACTIVER LES DEUX INTERVALS
-                return status, 100, "100%", True, True, launch_btn_style, stop_btn_style, False
-            
-            return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
+        if not is_running:
+            return no_update, no_update
         
-        # Calculer la progression
-        total = prediction_status_global['total']
-        current = prediction_status_global['progress']
-        progress = int((current / total) * 100) if total > 0 else 0
+        message = prediction_status_global.get('message', 'En cours...')
+        progress = min(prediction_status_global.get('progress', 0), 100)
         
-        # Créer le message de statut
+        if prediction_status_global.get('completed', False):
+            status = html.Div([
+                html.I(className="fas fa-check-circle", style={
+                    "color": "#48bb78",
+                    "fontSize": "28px",
+                    "marginRight": "12px"
+                }),
+                html.Span(
+                    "✅ Prédictions terminées avec succès !",
+                    style={
+                        "color": "#2d3748",
+                        "fontSize": "17px",
+                        "fontWeight": "500"
+                    }
+                )
+            ], style={
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center"
+            })
+            return status, 100
+        
         status = html.Div([
-            html.I(className="fas fa-spinner fa-spin", style={"color": "#005dff", "fontSize": "24px"}),
+            html.I(className="fas fa-spinner fa-spin", style={
+                "color": "#667eea",
+                "fontSize": "28px",
+                "marginRight": "12px"
+            }),
             html.Span(
-                f" {prediction_status_global['message']} ({current}/{total})",
-                style={"marginLeft": "10px", "color": "#005dff", "fontSize": "16px"}
+                message,
+                style={
+                    "color": "#2d3748",
+                    "fontSize": "17px",
+                    "fontWeight": "500"
+                }
             )
-        ])
+        ], style={
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center"
+        })
         
-        label = f"{progress}%"
-        
-        # Les intervals restent activés (False)
-        return status, progress, label, False, False, no_update, no_update, True
+        return status, progress
     
     # Callback pour arrêter les prédictions
     @app.callback(
         [Output("prediction-status", "children", allow_duplicate=True),
          Output("interval-check-status", "disabled", allow_duplicate=True),
          Output("interval-update-graph", "disabled", allow_duplicate=True),
-         Output("prediction-progress", "style", allow_duplicate=True),
+         Output("progress-container", "style", allow_duplicate=True),
          Output("btn-launch-predictions", "style", allow_duplicate=True),
          Output("btn-stop-predictions", "style", allow_duplicate=True),
          Output("store-prediction-running", "data", allow_duplicate=True)],
@@ -379,21 +600,32 @@ def register_prediction_callbacks(app):
         global prediction_status_global
         set_stop_flag(True)
         prediction_status_global['running'] = False
-        prediction_status_global['completed'] = True  # ✅ Marquer comme terminé
+        prediction_status_global['completed'] = True
         
         status = html.Div([
-            html.I(className="fas fa-stop-circle", style={"color": "orange", "fontSize": "24px"}),
+            html.I(className="fas fa-stop-circle", style={
+                "color": "#ed8936",
+                "fontSize": "28px",
+                "marginRight": "12px"
+            }),
             html.Span(
-                " ⏸️ Arrêté par l'utilisateur.",
-                style={"marginLeft": "10px", "color": "orange", "fontSize": "16px"}
+                "⏸️ Arrêté par l'utilisateur.",
+                style={
+                    "color": "#2d3748",
+                    "fontSize": "17px",
+                    "fontWeight": "500"
+                }
             )
-        ])
+        ], style={
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center"
+        })
         
-        progress_style = {"marginTop": "10px", "height": "25px", "display": "none"}
-        launch_btn_style = {"marginRight": "10px", "display": "inline-block"}
-        stop_btn_style = {"marginRight": "10px", "display": "none"}
+        progress_style = {"marginTop": "15px", "display": "none"}
+        launch_btn_style = {"marginRight": "10px", "display": "inline-block", "borderRadius": "10px", "fontWeight": "600"}
+        stop_btn_style = {"marginRight": "10px", "display": "none", "borderRadius": "10px", "fontWeight": "600"}
         
-        # ✅ DÉSACTIVER LES DEUX INTERVALS
         return status, True, True, progress_style, launch_btn_style, stop_btn_style, False
     
     # Callback pour effacer les prédictions
@@ -409,12 +641,24 @@ def register_prediction_callbacks(app):
         clear_predictions()
         
         status = html.Div([
-            html.I(className="fas fa-trash", style={"color": "red", "fontSize": "24px"}),
+            html.I(className="fas fa-trash-alt", style={
+                "color": "#f56565",
+                "fontSize": "28px",
+                "marginRight": "12px"
+            }),
             html.Span(
-                " Toutes les prédictions ont été effacées.",
-                style={"marginLeft": "10px", "color": "red", "fontSize": "16px"}
+                "🗑️ Toutes les prédictions ont été effacées.",
+                style={
+                    "color": "#2d3748",
+                    "fontSize": "17px",
+                    "fontWeight": "500"
+                }
             )
-        ])
+        ], style={
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center"
+        })
         
         return status
     
@@ -451,7 +695,7 @@ def register_prediction_callbacks(app):
 
 
 def create_prediction_graph(df, idpoint, variable, period=None):
-    """Crée le graphique de comparaison historique vs prédictions"""
+    """Crée le graphique moderne de comparaison historique vs prédictions"""
     
     fig = go.Figure()
     
@@ -460,6 +704,12 @@ def create_prediction_graph(df, idpoint, variable, period=None):
         'ensoleillement': '☀️ Ensoleillement (heures)',
         'precipitation': '🌧️ Précipitations (mm)',
         'irradiance': '⚡ Irradiance (W/m²)'
+    }
+    
+    # Couleurs modernes
+    colors = {
+        'historique': '#667eea',
+        'prediction': '#f093fb'
     }
     
     df['value'] = pd.to_numeric(df['value'], errors='coerce')
@@ -486,50 +736,55 @@ def create_prediction_graph(df, idpoint, variable, period=None):
         end_date = last_hist_date + timedelta(days=days)
         df_pred = df_pred[df_pred['date'] <= end_date]
     
-    print(f"📊 Point {idpoint}, Variable {variable}: Hist={len(df_hist)}, Pred={len(df_pred)}")
-    
+    # Historique avec style moderne
     if not df_hist.empty:
         fig.add_trace(go.Scatter(
             x=df_hist['date'],
             y=df_hist['value'],
             mode='lines',
-            name='📊 Historique (2019-2024)',
-            line=dict(color='#005dff', width=2.5),
-            hovertemplate='<b>Date:</b> %{x|%Y-%m-%d}<br><b>Valeur:</b> %{y:.2f}<extra></extra>'
+            name='📊 Données Historiques',
+            line=dict(color=colors['historique'], width=3),
+            fill='tozeroy',
+            fillcolor=f'rgba(102, 126, 234, 0.1)',
+            hovertemplate='<b>%{x|%d/%m/%Y}</b><br>Valeur: <b>%{y:.2f}</b><extra></extra>'
         ))
     
+    # Prédictions avec style moderne
     if not df_pred.empty:
         fig.add_trace(go.Scatter(
             x=df_pred['date'],
             y=df_pred['value'],
             mode='lines',
-            name='🔮 Prédictions AI',
-            line=dict(color='#ff4757', width=3, dash='solid'),
-            hovertemplate='<b>Date:</b> %{x|%Y-%m-%d}<br><b>Prédiction:</b> %{y:.2f}<extra></extra>'
+            name='🔮 Prédictions IA',
+            line=dict(color=colors['prediction'], width=3.5, dash='solid'),
+            fill='tozeroy',
+            fillcolor=f'rgba(240, 147, 251, 0.15)',
+            hovertemplate='<b>%{x|%d/%m/%Y}</b><br>Prédiction: <b>%{y:.2f}</b><extra></extra>'
         ))
     
+    # Configuration des axes
     all_values = pd.concat([df_hist['value'], df_pred['value']]).dropna()
     
     if not all_values.empty and len(all_values) > 0:
         y_max = float(all_values.max())
         y_min = float(all_values.min())
-        y_range = max(abs(y_max), abs(y_min)) * 1.1
+        y_range = max(abs(y_max), abs(y_min)) * 1.15
         
         yaxis_config = dict(
             showgrid=True,
-            gridcolor='#e0e0e0',
+            gridcolor='rgba(200, 200, 200, 0.2)',
             zeroline=True,
             zerolinewidth=2,
-            zerolinecolor='#2c3e50',
+            zerolinecolor='rgba(100, 100, 100, 0.3)',
             range=[-y_range, y_range]
         )
     else:
         yaxis_config = dict(
             showgrid=True,
-            gridcolor='#e0e0e0',
+            gridcolor='rgba(200, 200, 200, 0.2)',
             zeroline=True,
             zerolinewidth=2,
-            zerolinecolor='#2c3e50'
+            zerolinecolor='rgba(100, 100, 100, 0.3)'
         )
     
     period_labels = {
@@ -543,41 +798,47 @@ def create_prediction_graph(df, idpoint, variable, period=None):
     
     period_text = period_labels.get(period, 'Toutes') if period else 'Toutes'
     
+    # Layout moderne
     fig.update_layout(
         title={
-            'text': f"{labels.get(variable, variable)} - Point GPS {idpoint}<br><sub>Historique vs Prédictions ({period_text}) avec saisonnalité</sub>",
-            'font': {'size': 22, 'color': '#2c3e50'},
+            'text': f"{labels.get(variable, variable)} - Point GPS {idpoint}<br><sub style='font-size:14px; color:#718096;'>Historique vs Prédictions IA ({period_text})</sub>",
+            'font': {'size': 24, 'color': '#2d3748', 'family': 'Arial, sans-serif'},
             'x': 0.5,
-            'xanchor': 'center'
+            'xanchor': 'center',
+            'y': 0.95,
+            'yanchor': 'top'
         },
-        xaxis_title="📅 Date",
-        yaxis_title=labels.get(variable, variable),
+        xaxis_title=dict(
+            text="📅 Date",
+            font=dict(size=14, color='#4a5568', family='Arial, sans-serif')
+        ),
+        yaxis_title=dict(
+            text=labels.get(variable, variable),
+            font=dict(size=14, color='#4a5568', family='Arial, sans-serif')
+        ),
         template="plotly_white",
         hovermode="x unified",
         legend=dict(
-            x=0.01, 
-            y=0.99,
-            bgcolor='rgba(255,255,255,0.8)',
-            bordercolor='#005dff',
-            borderwidth=2
+            x=0.02,
+            y=0.98,
+            bgcolor='rgba(255, 255, 255, 0.95)',
+            bordercolor='#667eea',
+            borderwidth=2,
+            font=dict(size=13, family='Arial, sans-serif'),
+            orientation='v'
         ),
-        height=600,
-        plot_bgcolor='#f8f9fa',
+        height=650,
+        plot_bgcolor='#fafafa',
+        paper_bgcolor='white',
         xaxis=dict(
             showgrid=True,
-            gridcolor='#e0e0e0',
-            tickformat='%Y-%m-%d'
+            gridcolor='rgba(200, 200, 200, 0.2)',
+            tickformat='%d/%m/%Y',
+            tickfont=dict(size=11, color='#4a5568')
         ),
         yaxis=yaxis_config,
-        annotations=[
-            dict(
-                text="Prophet AI avec saisonnalité complète",
-                xref="paper", yref="paper",
-                x=0.5, y=-0.15,
-                showarrow=False,
-                font=dict(size=12, color='#7f8c8d')
-            )
-        ]
+        margin=dict(l=60, r=40, t=120, b=60),
+        font=dict(family='Arial, sans-serif')
     )
     
     return fig
