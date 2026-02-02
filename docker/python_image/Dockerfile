@@ -42,7 +42,8 @@ RUN pip install --no-cache-dir \
     rtree==1.1.0 \
     google-genai \
     flask \
-    prometheus-client 
+    prometheus-client \
+    gunicorn
 
     
 
