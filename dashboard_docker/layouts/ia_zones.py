@@ -31,6 +31,30 @@ def get_connection():
         database="projet_solarx"
     )
 
+def ensure_zones_table():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS zones_industrielles (
+            id INT NOT NULL AUTO_INCREMENT,
+            ville VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            latitude DOUBLE NOT NULL,
+            longitude DOUBLE NOT NULL,
+            surface_m2 DOUBLE NOT NULL,
+            niveau_adaptabilite VARCHAR(50) NOT NULL,
+            production_potentielle DOUBLE NOT NULL,
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_zone (ville, latitude, longitude)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        """
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
 
 # ============================================================================
 # 🗺️ EXTRACTION DES ZONES INDUSTRIELLES
@@ -190,6 +214,7 @@ def load_zones_from_db():
 # ============================================================================
 
 def initialize_default_data():
+    ensure_zones_table()
     conn = get_connection()
     cursor = conn.cursor()
 
