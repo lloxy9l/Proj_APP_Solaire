@@ -45,9 +45,9 @@ def render_prediction():
             html.Div([
                 html.Div([
                     html.H1(
-                        "Prédictions Météo IA",
+                        "🔮 Prédictions Météo IA",
                         style={
-                            "color": "black",
+                            "color": "white",
                             "marginBottom": "10px",
                             "fontSize": "3rem",
                             "fontWeight": "700",
@@ -55,9 +55,9 @@ def render_prediction():
                         }
                     ),
                     html.P(
-                        "Intelligence Artificielle Prophet",
+                        "Intelligence Artificielle Prophet (Facebook) • Analyse avec saisonnalité complète",
                         style={
-                            "color": "black",
+                            "color": "rgba(255,255,255,0.9)",
                             "fontSize": "1.1rem",
                             "marginBottom": "0"
                         }
@@ -198,25 +198,6 @@ def render_prediction():
                             "justifyContent": "center"
                         }
                     ),
-                    
-                    # Barre de progression moderne
-                    html.Div([
-                        dbc.Progress(
-                            id="prediction-progress",
-                            value=0,
-                            striped=True,
-                            animated=True,
-                            style={
-                                "height": "30px",
-                                "borderRadius": "15px",
-                                "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
-                            },
-                            className="mb-0"
-                        ),
-                    ], style={
-                        "marginTop": "15px",
-                        "display": "none"
-                    }, id="progress-container"),
                 ]),
             ], style={
                 "marginBottom": "30px",
@@ -461,7 +442,6 @@ def register_prediction_callbacks(app):
         [Output("prediction-status", "children", allow_duplicate=True),
          Output("interval-check-status", "disabled", allow_duplicate=True),
          Output("interval-update-graph", "disabled", allow_duplicate=True),
-         Output("progress-container", "style", allow_duplicate=True),
          Output("btn-launch-predictions", "style", allow_duplicate=True),
          Output("btn-stop-predictions", "style", allow_duplicate=True),
          Output("store-prediction-running", "data", allow_duplicate=True)],
@@ -471,7 +451,7 @@ def register_prediction_callbacks(app):
     )
     def launch_predictions(n_clicks, period):
         if not n_clicks:
-            return no_update, no_update, no_update, no_update, no_update, no_update, no_update
+            return no_update, no_update, no_update, no_update, no_update, no_update
         
         global prediction_status_global
         
@@ -514,16 +494,14 @@ def register_prediction_callbacks(app):
             })
         ])
         
-        progress_style = {"marginTop": "15px", "display": "block"}
         launch_btn_style = {"marginRight": "10px", "display": "none", "borderRadius": "10px", "fontWeight": "600"}
         stop_btn_style = {"marginRight": "10px", "display": "inline-block", "borderRadius": "10px", "fontWeight": "600"}
         
-        return status, False, False, progress_style, launch_btn_style, stop_btn_style, True
+        return status, False, False, launch_btn_style, stop_btn_style, True
     
     # Callback pour surveiller l'état
     @app.callback(
-        [Output("prediction-status", "children", allow_duplicate=True),
-         Output("prediction-progress", "value", allow_duplicate=True)],
+        Output("prediction-status", "children", allow_duplicate=True),
         Input("interval-check-status", "n_intervals"),
         State("store-prediction-running", "data"),
         prevent_initial_call=True
@@ -532,10 +510,9 @@ def register_prediction_callbacks(app):
         global prediction_status_global
         
         if not is_running:
-            return no_update, no_update
+            return no_update
         
         message = prediction_status_global.get('message', 'En cours...')
-        progress = min(prediction_status_global.get('progress', 0), 100)
         
         if prediction_status_global.get('completed', False):
             status = html.Div([
@@ -557,7 +534,7 @@ def register_prediction_callbacks(app):
                 "alignItems": "center",
                 "justifyContent": "center"
             })
-            return status, 100
+            return status
         
         status = html.Div([
             html.I(className="fas fa-spinner fa-spin", style={
@@ -579,14 +556,13 @@ def register_prediction_callbacks(app):
             "justifyContent": "center"
         })
         
-        return status, progress
+        return status
     
     # Callback pour arrêter les prédictions
     @app.callback(
         [Output("prediction-status", "children", allow_duplicate=True),
          Output("interval-check-status", "disabled", allow_duplicate=True),
          Output("interval-update-graph", "disabled", allow_duplicate=True),
-         Output("progress-container", "style", allow_duplicate=True),
          Output("btn-launch-predictions", "style", allow_duplicate=True),
          Output("btn-stop-predictions", "style", allow_duplicate=True),
          Output("store-prediction-running", "data", allow_duplicate=True)],
@@ -595,7 +571,7 @@ def register_prediction_callbacks(app):
     )
     def stop_predictions(n_clicks):
         if not n_clicks:
-            return no_update, no_update, no_update, no_update, no_update, no_update, no_update
+            return no_update, no_update, no_update, no_update, no_update, no_update
         
         global prediction_status_global
         set_stop_flag(True)
@@ -622,11 +598,10 @@ def register_prediction_callbacks(app):
             "justifyContent": "center"
         })
         
-        progress_style = {"marginTop": "15px", "display": "none"}
         launch_btn_style = {"marginRight": "10px", "display": "inline-block", "borderRadius": "10px", "fontWeight": "600"}
         stop_btn_style = {"marginRight": "10px", "display": "none", "borderRadius": "10px", "fontWeight": "600"}
         
-        return status, True, True, progress_style, launch_btn_style, stop_btn_style, False
+        return status, True, True, launch_btn_style, stop_btn_style, False
     
     # Callback pour effacer les prédictions
     @app.callback(
@@ -664,8 +639,7 @@ def register_prediction_callbacks(app):
     
     # Callback pour mettre à jour le graphique
     @app.callback(
-        [Output("graph-predictions", "figure", allow_duplicate=True),
-         Output("prediction-progress", "value", allow_duplicate=True)],
+        Output("graph-predictions", "figure", allow_duplicate=True),
         [Input("dropdown-point-prediction", "value"),
          Input("dropdown-variable-prediction", "value"),
          Input("dropdown-period-prediction", "value"),
@@ -674,24 +648,21 @@ def register_prediction_callbacks(app):
     )
     def update_prediction_graph(idpoint, variable, period, n_intervals):
         if not idpoint or not variable:
-            return go.Figure(), 0
+            return go.Figure()
         
         try:
             df = get_comparison_data(idpoint, variable)
             
             if df.empty:
-                return go.Figure(), 0
+                return go.Figure()
             
             fig = create_prediction_graph(df, idpoint, variable, period)
             
-            has_predictions = len(df[df['type'] == 'Prédiction']) > 0
-            progress = 100 if has_predictions else 50
-            
-            return fig, progress
+            return fig
             
         except Exception as e:
             print(f"Erreur update_prediction_graph: {e}")
-            return go.Figure(), 0
+            return go.Figure()
 
 
 def create_prediction_graph(df, idpoint, variable, period=None):

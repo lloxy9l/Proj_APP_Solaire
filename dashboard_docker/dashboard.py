@@ -644,7 +644,7 @@ vertical_header = html.Div(
                 html.A(
                     children=[
                         html.Img(
-                            src="assets/img/prediction.png",  
+                            src="assets/img/prediction2.png",  
                             style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
                         html.Span(
