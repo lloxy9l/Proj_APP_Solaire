@@ -180,7 +180,7 @@ const markers = L.markerClusterGroup({
 
 // 🎯 CHARGE LES DONNÉES DE LA BDD
 function loadZones() {
-  fetch("http://localhost:8050/getDefaultZones")
+  fetch("/getDefaultZones")
     .then(r => r.json())
     .then(data => {
       markers.clearLayers();
@@ -240,7 +240,7 @@ regionInput.addEventListener("keypress", (e) => {
     const region = regionInput.value.trim();
     if (!region) return alert("Veuillez entrer une région !");
 
-    fetch("http://localhost:8050/updateRegion", {
+    fetch("/updateRegion", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ region })
@@ -382,7 +382,7 @@ regionInput.addEventListener("keypress", (e) => {
       const region = document.getElementById("regionInput").value.trim();
       if (!region) return alert("Veuillez entrer une région !");
       
-      fetch("http://localhost:8050/updateRegion", {
+      fetch("/updateRegion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ region })
