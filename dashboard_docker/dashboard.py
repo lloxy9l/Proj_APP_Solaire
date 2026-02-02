@@ -663,15 +663,10 @@ vertical_header = html.Div(
         ),
         
         # Bouton pour changer la taille
-        html.Button(
+        html.Div(
             children=[
-                html.Img(
-                    src="assets/img/arrow.png",  # Icône de flèche
-                    style={"width": "40px", "transition": "transform 0.3s"}  # Ajout de la transition de rotation
-                ),
+                
             ],
-            id="toggle-width-btn",
-            style={"margin-top": "20px", "padding": "12px", "background-color": "#ffffff", "color": "#005dff", "border": "none", "cursor": "pointer", "border-radius": "2em"},
         ),
     ],
 )
