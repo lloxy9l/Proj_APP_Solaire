@@ -34,6 +34,7 @@ services:
     build: ./python_image
     container_name: python_env
     restart: always
+    command: ["gunicorn", "--bind", "0.0.0.0:8050", "--workers", "2", "--threads", "4", "dashboard:server"]
     depends_on:
       db:
         condition: service_healthy
