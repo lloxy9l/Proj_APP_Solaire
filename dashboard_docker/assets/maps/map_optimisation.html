@@ -1,284 +1,502 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte d'optimisation des panneaux solaires</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carte d'optimisation des panneaux solaires</title>
 
-    <!-- Leaflet + MarkerCluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: Arial, sans-serif; overflow: hidden; }
+    #map { width: 100%; height: 100vh; }
 
-        #map {
-            width: 100%;
-            height: 100vh;
-        }
+    /* Legend */
+    .legend {
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      font-size: 13px;
+      line-height: 1.35;
+      border: 1px solid rgba(0,0,0,0.08);
+      max-width: 240px;
+    }
+    .legend-title { font-weight: 800; margin-bottom: 6px; display:flex; align-items:center; gap:8px; }
+    .legend-sub { font-size: 11px; color: #666; margin: 0 0 8px 0; }
+    .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
+    .legend-color {
+      width: 16px; height: 16px; border-radius: 50%;
+      margin-right: 8px; border: 1px solid rgba(0,0,0,0.25);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7);
+    }
+    .legend-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #E74C3C, #E67E22, #F1C40F, #27AE60, #2ECC71);
+      margin: 8px 0 8px 0;
+      border: 1px solid rgba(0,0,0,0.12);
+    }
+    .legend-scale { display:flex; justify-content:space-between; font-size: 10px; color:#666; }
 
-        .legend {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-            font-size: 12px;
-            line-height: 1.4;
-        }
+    /* Filter control */
+    .filter-box {
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      border: 1px solid rgba(0,0,0,0.08);
+      width: 260px;
+    }
+    .filter-title { font-weight: 800; font-size: 13px; margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .filter-chip {
+      display:inline-flex; align-items:center; gap:6px;
+      padding: 4px 10px; border-radius: 999px;
+      font-weight: 800; font-size: 12px;
+      background: rgba(0,93,255,0.10); color: #005DFF;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    .filter-row { display:flex; align-items:center; gap:10px; }
+    .filter-row input[type="range"] { width: 100%; }
+    .filter-val { font-weight: 900; color:#005DFF; font-size: 12px; min-width: 42px; text-align:right; }
 
-        .legend-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
+    .cluster-icon { background: transparent; border: none; }
 
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 3px;
-        }
+    /* Zoom notification */
+    .zoom-notification {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #27AE60, #2ECC71);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(39,174,96,0.4);
+      z-index: 2000;
+      display: none;
+    }
 
-        .legend-color {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            margin-right: 5px;
-            border: 1px solid #555;
-        }
-    </style>
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    .highlight-marker { animation: pulse 1.5s ease-out infinite; }
+  </style>
 </head>
+
 <body>
-<div id="map"></div>
+  <div id="map"></div>
+  <div id="zoom-notification" class="zoom-notification"></div>
 
-<!-- Leaflet + MarkerCluster JS -->
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
 
-<script>
-    // Initialisation de la carte
+  <script>
+    // =========================
+    // Map init
+    // =========================
     const map = L.map('map').setView([46.2, 6.1], 8);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Couleurs en fonction du score global (0-100)
     function getColor(score) {
-        if (score >= 95) return '#2ECC71';      // excellent
-        if (score >= 85) return '#27AE60';      // très bon
-        if (score >= 70) return '#F1C40F';      // bon
-        if (score >= 50) return '#E67E22';      // moyen
-        return '#E74C3C';                       // faible
+      if (score >= 95) return '#2ECC71';
+      if (score >= 85) return '#27AE60';
+      if (score >= 70) return '#F1C40F';
+      if (score >= 50) return '#E67E22';
+      return '#E74C3C';
     }
 
-    // Légende
+    // =========================
+    // Legend
+    // =========================
     const legend = L.control({position: 'bottomleft'});
     legend.onAdd = function () {
-        const div = L.DomUtil.create('div', 'legend');
-        div.innerHTML = `
-            <div class="legend-title">Légende score (%)</div>
-            <div class="legend-item"><span class="legend-color" style="background:${getColor(25)}"></span>0 – 50 : faible</div>
-            <div class="legend-item"><span class="legend-color" style="background:${getColor(60)}"></span>50 – 70 : moyen</div>
-            <div class="legend-item"><span class="legend-color" style="background:${getColor(75)}"></span>70 – 85 : bon</div>
-            <div class="legend-item"><span class="legend-color" style="background:${getColor(90)}"></span>85 – 95 : très bon</div>
-            <div class="legend-item"><span class="legend-color" style="background:${getColor(97)}"></span>95 – 100 : excellent</div>
-        `;
-        return div;
+      const div = L.DomUtil.create('div', 'legend');
+      div.innerHTML = `
+        <div class="legend-title">🧭 Légende score (%)</div>
+        <div class="legend-sub">Lecture rapide du potentiel solaire</div>
+        <div class="legend-bar"></div>
+        <div class="legend-scale"><span>0</span><span>50</span><span>70</span><span>85</span><span>100</span></div>
+        <div style="height:10px"></div>
+        <div class="legend-item"><span class="legend-color" style="background:${getColor(25)}"></span>0 – 50 : faible</div>
+        <div class="legend-item"><span class="legend-color" style="background:${getColor(60)}"></span>50 – 70 : moyen</div>
+        <div class="legend-item"><span class="legend-color" style="background:${getColor(75)}"></span>70 – 85 : bon</div>
+        <div class="legend-item"><span class="legend-color" style="background:${getColor(90)}"></span>85 – 95 : très bon</div>
+        <div class="legend-item"><span class="legend-color" style="background:${getColor(97)}"></span>95 – 100 : excellent</div>
+      `;
+      return div;
     };
     legend.addTo(map);
 
-    // Normalisation min-max (comme dans dashboard.py)
+    // =========================
+    // Filter control
+    // =========================
+    let minScore = 60;
+
+    const filterCtl = L.control({position: 'topright'});
+    filterCtl.onAdd = function() {
+      const div = L.DomUtil.create('div', 'filter-box');
+      div.innerHTML = `
+        <div class="filter-title">
+          <span>Filtre carte (score minimum)</span>
+          <span class="filter-chip">⚡ Dynamique</span>
+        </div>
+        <div class="filter-row">
+          <input id="minScoreRange" type="range" min="0" max="100" step="1" value="${minScore}" />
+          <span id="minScoreVal" class="filter-val">${minScore}%</span>
+        </div>
+      `;
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+      return div;
+    };
+    filterCtl.addTo(map);
+
+    // =========================
+    // Normalisation helpers
+    // =========================
     function computeMinMax(values) {
-        let min = Infinity, max = -Infinity;
-        values.forEach(v => {
-            if (v == null || isNaN(v)) return;
-            if (v < min) min = v;
-            if (v > max) max = v;
-        });
-        if (!isFinite(min) || !isFinite(max) || min === max) {
-            return {min: 0, max: 0, neutral: true};
-        }
-        return {min, max, neutral: false};
+      let min = Infinity, max = -Infinity;
+      values.forEach(v => {
+        if (v == null || isNaN(v)) return;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      });
+      if (!isFinite(min) || !isFinite(max) || min === max) {
+        return {min: 0, max: 0, neutral: true};
+      }
+      return {min, max, neutral: false};
     }
 
     function normalizeValue(v, stats) {
-        if (v == null || isNaN(v) || stats.neutral) return 0.5;
-        return (v - stats.min) / (stats.max - stats.min);
+      if (v == null || isNaN(v) || stats.neutral) return 0.5;
+      return (v - stats.min) / (stats.max - stats.min);
     }
 
-    // Création des marqueurs avec calcul du score global
-    function addPointsToMap(data) {
-        if (!Array.isArray(data) || data.length === 0) {
-            console.warn("Aucun point reçu pour l'optimisation");
-            return;
+    // =========================
+    // Markers + filtering
+    // =========================
+    let __allMarkers = [];
+    let __cluster = null;
+    let __dataPoints = [];
+
+    function buildCluster() {
+      __cluster = L.markerClusterGroup({
+        maxClusterRadius: 40,
+        iconCreateFunction: function(cluster) {
+          const childMarkers = cluster.getAllChildMarkers();
+          let sum = 0, count = 0;
+          childMarkers.forEach(m => {
+            if (typeof m.options.score_global === 'number') { sum += m.options.score_global; count++; }
+          });
+          const avg = count > 0 ? (sum / count) : 0;
+          const avgRounded = avg.toFixed(0);
+          const color = getColor(avg);
+          return L.divIcon({
+            html: `<div style="
+              background-color:${color};
+              border-radius:50%;
+              width: 40px;
+              height: 40px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-weight: 900;
+              border: 2px solid #fff;
+              box-shadow: 0 0 5px rgba(0,0,0,0.4);
+            ">${avgRounded}</div>`,
+            className: 'cluster-icon',
+            iconSize: [40, 40]
+          });
         }
-
-        // Prépare les stats pour la normalisation
-        const ensVals  = data.map(p => p.ensoleillement);
-        const irrVals  = data.map(p => p.irradiance);
-        const prodVals = data.map(p => p.production);
-        const precVals = data.map(p => p.precipitation);
-        const tempVals = data.map(p => p.temperature);
-
-        const ensStats  = computeMinMax(ensVals);
-        const irrStats  = computeMinMax(irrVals);
-        const prodStats = computeMinMax(prodVals);
-        const precStats = computeMinMax(precVals);
-        const tempStats = computeMinMax(tempVals);
-
-        const markers = L.markerClusterGroup({
-            maxClusterRadius: 40,
-            iconCreateFunction: function(cluster) {
-                const childMarkers = cluster.getAllChildMarkers();
-                let sum = 0, count = 0;
-                childMarkers.forEach(m => {
-                    if (typeof m.options.score_global === 'number') {
-                        sum += m.options.score_global;
-                        count++;
-                    }
-                });
-                const avg = count > 0 ? (sum / count) : 0;
-                const avgRounded = avg.toFixed(0);
-                const color = getColor(avg);
-
-                return L.divIcon({
-                    html: `<div style="
-                        background-color:${color};
-                        border-radius:50%;
-                        width: 40px;
-                        height: 40px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-weight: bold;
-                        border: 2px solid #fff;
-                        box-shadow: 0 0 5px rgba(0,0,0,0.4);
-                    ">${avgRounded}</div>`,
-                    className: 'cluster-icon',
-                    iconSize: [40, 40]
-                });
-            }
-        });
-
-        data.forEach(point => {
-            const lat = point.latitude;
-            const lon = point.longitude;
-            if (lat == null || lon == null) return;
-
-            const ens  = point.ensoleillement;
-            const irr  = point.irradiance;
-            const prod = point.production;
-            const prec = point.precipitation;
-            const temp = point.temperature;
-
-            // Normalisations
-            const normEns  = normalizeValue(ens,  ensStats);
-            const normIrr  = normalizeValue(irr,  irrStats);
-            const normProd = normalizeValue(prod, prodStats);
-            const normPrec = normalizeValue(prec, precStats);
-            const normTempDev = normalizeValue(Math.abs(temp - 20), tempStats);
-
-            // Scores partiels (0-1)
-            let scoreEns  = normEns;
-            let scoreIrr  = normIrr;
-            let scoreProd = normProd;
-            let scorePrec = 1 - normPrec;
-            let scoreTemp = 1 - normTempDev;
-
-            // Clip 0-1
-            scoreEns  = Math.min(1, Math.max(0, scoreEns));
-            scoreIrr  = Math.min(1, Math.max(0, scoreIrr));
-            scoreProd = Math.min(1, Math.max(0, scoreProd));
-            scorePrec = Math.min(1, Math.max(0, scorePrec));
-            scoreTemp = Math.min(1, Math.max(0, scoreTemp));
-
-            // Pondérations (mêmes que dashboard.py)
-            const wEns  = 0.30;
-            const wIrr  = 0.25;
-            const wProd = 0.25;
-            const wPrec = 0.10;
-            const wTemp = 0.10;
-
-            const score_global = 100 * (
-                wEns  * scoreEns  +
-                wIrr  * scoreIrr  +
-                wProd * scoreProd +
-                wPrec * scorePrec +
-                wTemp * scoreTemp
-            );
-
-            const idpoint = point.idpoint || "";
-            const adresse = point.adresse || "Adresse inconnue";
-
-            const popupContent = `
-                <b>Point GPS ${idpoint}</b><br>
-                ${adresse}<br>
-                Score global : ${score_global.toFixed(1)} %<br>
-                Ensoleillement : ${ens != null ? ens.toFixed(2) : "N/A"} h/j<br>
-                Irradiance : ${irr != null ? irr.toFixed(2) : "N/A"} kWh/m²<br>
-                Production : ${prod != null ? prod.toFixed(2) : "N/A"} kWh<br>
-                Précipitations : ${prec != null ? prec.toFixed(2) : "N/A"} mm<br>
-                Température : ${temp != null ? temp.toFixed(1) : "N/A"} °C
-            `;
-
-            const marker = L.marker([lat, lon], {
-                icon: L.divIcon({
-                    className: 'custom-icon',
-                    html: `<div style="
-                        background:${getColor(score_global)};
-                        width: 34px;
-                        height: 34px;
-                        border-radius: 50%;
-                        border: 2px solid #fff;
-                        box-shadow: 0 0 3px rgba(0,0,0,0.5);
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#ffffff;
-                        font-size:11px;
-                        font-weight:bold;
-                    ">${score_global.toFixed(0)}%</div>`,
-                    iconSize: [34, 34],
-                    iconAnchor: [17, 17]
-                }),
-                score_global: score_global
-            }).bindPopup(popupContent);
-
-            markers.addLayer(marker);
-        });
-
-        map.addLayer(markers);
+      });
+      map.addLayer(__cluster);
     }
 
-    // Récupération des points depuis l'API existante /getPoints (comme ensoleillement)
+    function computeScores(data) {
+      const ensVals = data.map(p => p.ensoleillement);
+      const irrVals = data.map(p => p.irradiance);
+      const prodVals = data.map(p => p.production);
+      const precVals = data.map(p => p.precipitation);
+      const tempVals = data.map(p => p.temperature);
+
+      const ensStats = computeMinMax(ensVals);
+      const irrStats = computeMinMax(irrVals);
+      const prodStats = computeMinMax(prodVals);
+      const precStats = computeMinMax(precVals);
+      const tempStats = computeMinMax(tempVals);
+
+      return data.map(point => {
+        const ens = point.ensoleillement;
+        const irr = point.irradiance;
+        const prod = point.production;
+        const prec = point.precipitation;
+        const temp = point.temperature;
+
+        const normEns = normalizeValue(ens, ensStats);
+        const normIrr = normalizeValue(irr, irrStats);
+        const normProd = normalizeValue(prod, prodStats);
+        const normPrec = normalizeValue(prec, precStats);
+        const normTempDev = normalizeValue(Math.abs((temp ?? 0) - 20), tempStats);
+
+        let scoreEns = Math.min(1, Math.max(0, normEns));
+        let scoreIrr = Math.min(1, Math.max(0, normIrr));
+        let scoreProd = Math.min(1, Math.max(0, normProd));
+        let scorePrec = Math.min(1, Math.max(0, 1 - normPrec));
+        let scoreTemp = Math.min(1, Math.max(0, 1 - normTempDev));
+
+        const wEns = 0.30, wIrr = 0.25, wProd = 0.25, wPrec = 0.10, wTemp = 0.10;
+
+        const score_global = 100 * (wEns*scoreEns + wIrr*scoreIrr + wProd*scoreProd + wPrec*scorePrec + wTemp*scoreTemp);
+        return Object.assign({}, point, {score_global});
+      });
+    }
+
+    function createMarker(point) {
+      const lat = point.latitude;
+      const lon = point.longitude;
+      if (lat == null || lon == null) return null;
+
+      const idpoint = point.idpoint || "";
+      const adresse = point.adresse || "Adresse inconnue";
+      const score_global = point.score_global ?? 0;
+
+      const popupContent = `
+        <b>Point GPS ${idpoint}</b><br>
+        ${adresse}<br>
+        <b>Score global :</b> ${score_global.toFixed(1)} %<br>
+        ☀️ Ensoleillement : ${point.ensoleillement != null ? Number(point.ensoleillement).toFixed(2) : "N/A"} h/j<br>
+        🔆 Irradiance : ${point.irradiance != null ? Number(point.irradiance).toFixed(2) : "N/A"} kWh/m²<br>
+        ⚡ Production : ${point.production != null ? Number(point.production).toFixed(2) : "N/A"} kWh<br>
+        🌧️ Précipitations : ${point.precipitation != null ? Number(point.precipitation).toFixed(2) : "N/A"} mm<br>
+        🌡️ Température : ${point.temperature != null ? Number(point.temperature).toFixed(1) : "N/A"} °C
+      `;
+
+      const marker = L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: 'custom-icon',
+          html: `<div style="
+            background:${getColor(score_global)};
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 3px rgba(0,0,0,0.5);
+            display:flex; align-items:center; justify-content:center;
+            color:#ffffff; font-size:11px; font-weight:900;
+          ">${score_global.toFixed(0)}%</div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17]
+        }),
+        score_global: score_global,
+        idpoint: idpoint,
+      }).bindPopup(popupContent);
+
+      return marker;
+    }
+
+    function renderMarkers() {
+      if (!__cluster) buildCluster();
+      __cluster.clearLayers();
+      __allMarkers = [];
+
+      const visible = [];
+      __dataPoints.forEach(point => {
+        if ((point.score_global ?? 0) < minScore) return;
+        const marker = createMarker(point);
+        if (!marker) return;
+        __allMarkers.push(marker);
+        __cluster.addLayer(marker);
+        visible.push(point);
+      });
+
+      visible.sort((a,b) => (b.score_global ?? 0) - (a.score_global ?? 0));
+      const top5 = visible.slice(0, 5).map(p => ({
+        idpoint: p.idpoint,
+        score_global: p.score_global,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        adresse: p.adresse,
+        ensoleillement: p.ensoleillement,
+        irradiance: p.irradiance,
+        production: p.production,
+        precipitation: p.precipitation,
+        temperature: p.temperature,
+      }));
+      try {
+        window.parent && window.parent.postMessage({type:"VISIBLE_TOP_CHANGED", value: top5, minScore: minScore}, "*");
+      } catch(e) {}
+    }
+
+    function setMinScore(v, emit=true) {
+      const nv = Math.max(0, Math.min(100, Number(v)));
+      if (isNaN(nv)) return;
+      minScore = nv;
+      const range = document.getElementById("minScoreRange");
+      const val = document.getElementById("minScoreVal");
+      if (range) range.value = String(minScore);
+      if (val) val.textContent = `${minScore}%`;
+      renderMarkers();
+      if (emit) {
+        try { window.parent && window.parent.postMessage({type:"MIN_SCORE_CHANGED", value:minScore}, "*"); } catch(e){}
+      }
+    }
+
+    function bindFilterEvents() {
+      const range = document.getElementById("minScoreRange");
+      if (!range) return;
+      range.addEventListener("input", (e) => {
+        setMinScore(e.target.value, true);
+      });
+    }
+
+    // =========================
+    // Zoom automatique
+    // =========================
+    let highlightMarker = null;
+    let highlightCircle = null;
+
+    function showZoomNotification(label) {
+      const notif = document.getElementById('zoom-notification');
+      notif.textContent = `📍 Navigation vers : ${label}`;
+      notif.style.display = 'block';
+      setTimeout(() => { notif.style.display = 'none'; }, 3000);
+    }
+
+    function clearHighlight() {
+      if (highlightMarker) { map.removeLayer(highlightMarker); highlightMarker = null; }
+      if (highlightCircle) { map.removeLayer(highlightCircle); highlightCircle = null; }
+    }
+
+    function zoomToPosition(lat, lon, zoom, label, idpoint) {
+      lat = parseFloat(lat);
+      lon = parseFloat(lon);
+      zoom = parseInt(zoom) || 13;
+      if (isNaN(lat) || isNaN(lon)) return;
+
+      map.setView([lat, lon], zoom, { animate: true, duration: 0.5 });
+      if (label) showZoomNotification(label);
+
+      clearHighlight();
+
+      highlightMarker = L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: 'highlight-marker',
+          html: `<div style="
+            width: 40px; height: 40px;
+            background: #FF6B35;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            display: flex; align-items: center; justify-content: center;
+          ">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+              <path d="M12 2L13.09 8.26L19 9L13.18 13.27L14.78 20L12 16.27L9.22 20L10.82 13.27L5 9L10.91 8.26L12 2Z"/>
+            </svg>
+          </div>`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        })
+      }).addTo(map);
+
+      if (label) highlightMarker.bindPopup(`<b>📍 ${label}</b>`).openPopup();
+
+      highlightCircle = L.circleMarker([lat, lon], {
+        radius: 35,
+        fillColor: '#FF6B35',
+        fillOpacity: 0.2,
+        color: '#FF6B35',
+        weight: 2
+      }).addTo(map);
+
+      setTimeout(clearHighlight, 8000);
+
+      // Ouvrir popup du point correspondant
+      if (idpoint && __allMarkers && __allMarkers.length) {
+        const mk = __allMarkers.find(m => String(m.options.idpoint) === String(idpoint));
+        if (mk) {
+          setTimeout(() => {
+            mk.openPopup();
+            if (mk.getLatLng) map.panTo(mk.getLatLng(), {animate:true});
+          }, 600);
+        }
+      }
+    }
+
+    function focusOnPoint(payload) {
+      const lat = payload.lat, lon = payload.lon;
+      const idpoint = payload.idpoint;
+      const zoom = payload.zoom || 12;
+      const label = payload.label || payload.name;
+
+      zoomToPosition(lat, lon, zoom, label, idpoint);
+    }
+
+    // PostMessage listener
+    window.addEventListener("message", (event) => {
+      const msg = event.data;
+      if (!msg || !msg.type) return;
+      if (msg.type === "SET_MIN_SCORE") {
+        setMinScore(msg.value, false);
+      } else if (msg.type === "FOCUS_POINT") {
+        focusOnPoint(msg);
+      } else if (msg.type === "ZOOM_TO") {
+        zoomToPosition(msg.lat, msg.lon, msg.zoom, msg.label || msg.name, msg.idpoint);
+      }
+    });
+
+    // URL params parsing
+    function parseUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      const lat = params.get('lat');
+      const lon = params.get('lon');
+      const zoom = params.get('zoom');
+      const name = params.get('name');
+      if (lat && lon) setTimeout(() => zoomToPosition(lat, lon, zoom, name), 1000);
+    }
+
+    // =========================
+    // Fetch points from API
+    // =========================
     async function fetchOptimPoints() {
-        const endpoints = [
-            'http://localhost:3000/getPoints',
-            '/api/getpoints'
-        ];
+      const endpoints = [
+        'http://localhost:3000/getPoints',
+        '/api/getpoints'
+      ];
 
-        for (const url of endpoints) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                console.log("Points reçus pour optimisation :", data.length);
-                addPointsToMap(data);
-                return;
-            } catch (error) {
-                console.error(`Erreur lors de la récupération des points via ${url}:`, error);
-            }
+      for (const url of endpoints) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          if (!Array.isArray(data) || data.length === 0) throw new Error("Empty data");
+          __dataPoints = computeScores(data);
+          bindFilterEvents();
+          renderMarkers();
+          parseUrlParams();
+          return;
+        } catch (error) {
+          console.error(`Erreur lors de la récupération des points via ${url}:`, error);
         }
+      }
     }
 
     fetchOptimPoints();
-</script>
+
+    // Expose functions globally
+    window.setMinScore = setMinScore;
+    window.focusOnPoint = focusOnPoint;
+    window.zoomToPosition = zoomToPosition;
+    window.map = map;
+  </script>
 </body>
 </html>

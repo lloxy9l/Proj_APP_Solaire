@@ -1,0 +1,68 @@
+{
+  "bdbaef0fb57d48b7": {
+    "session_id": "bdbaef0fb57d48b7",
+    "title": "Nouvelle conversation",
+    "created_at": "2026-01-26T17:50:15.369484",
+    "updated_at": "2026-01-26T17:50:15.369511",
+    "messages": [],
+    "summary": "",
+    "topics": [],
+    "entities_mentioned": [],
+    "metadata": {}
+  },
+  "73550b956a40e459": {
+    "session_id": "73550b956a40e459",
+    "title": "Nouvelle conversation",
+    "created_at": "2026-01-26T18:14:40.129566",
+    "updated_at": "2026-01-26T18:14:40.129591",
+    "messages": [],
+    "summary": "",
+    "topics": [],
+    "entities_mentioned": [],
+    "metadata": {}
+  },
+  "70241f4c13826747": {
+    "session_id": "70241f4c13826747",
+    "title": "Nouvelle conversation",
+    "created_at": "2026-01-26T18:14:57.855827",
+    "updated_at": "2026-01-26T18:14:57.855832",
+    "messages": [],
+    "summary": "",
+    "topics": [],
+    "entities_mentioned": [],
+    "metadata": {}
+  },
+  "07eacfe0b393d932": {
+    "session_id": "07eacfe0b393d932",
+    "title": "Nouvelle conversation",
+    "created_at": "2026-01-26T20:30:59.845758",
+    "updated_at": "2026-01-26T20:30:59.845773",
+    "messages": [],
+    "summary": "",
+    "topics": [],
+    "entities_mentioned": [],
+    "metadata": {}
+  },
+  "e428c54aa0cef3b2": {
+    "session_id": "e428c54aa0cef3b2",
+    "title": "Nouvelle conversation",
+    "created_at": "2026-01-26T20:31:02.054131",
+    "updated_at": "2026-01-26T20:31:02.054144",
+    "messages": [],
+    "summary": "",
+    "topics": [],
+    "entities_mentioned": [],
+    "metadata": {}
+  },
+  "522002dec70fcd46": {
+    "session_id": "522002dec70fcd46",
+    "title": "Nouvelle conversation",
+    "created_at": "2026-01-26T20:31:24.503629",
+    "updated_at": "2026-01-26T20:31:24.503643",
+    "messages": [],
+    "summary": "",
+    "topics": [],
+    "entities_mentioned": [],
+    "metadata": {}
+  }
+}

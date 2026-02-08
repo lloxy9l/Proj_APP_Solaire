@@ -1,8 +1,271 @@
+from __future__ import annotations
 import base64
+import json
+import uuid
 import dash
 from dash import html, dcc, Input, Output, State, no_update
+from dash.dependencies import ALL
 
 from services.chat_service import generate_chat_response
+
+# Soft import (le chatbot fonctionne même si le service mémoire n'est pas dispo)
+try:
+    from services.memory_service import get_memory_service
+except Exception:  # pragma: no cover
+    get_memory_service = None
+
+
+# ------------------------------------------------------------
+# UI helpers
+# ------------------------------------------------------------
+
+def _bot_avatar():
+    return html.Div(
+        "🤖",
+        style={
+            "width": "28px",
+            "height": "28px",
+            "border-radius": "50%",
+            "backgroundColor": "#005DFF",
+            "color": "white",
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "font-size": "16px",
+            "margin-right": "8px",
+            "flex-shrink": 0,
+        },
+    )
+
+
+def _user_avatar():
+    return html.Div(
+        "🧑‍💻",
+        style={
+            "width": "28px",
+            "height": "28px",
+            "border-radius": "50%",
+            "backgroundColor": "#2F9BFF",
+            "color": "white",
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "font-size": "16px",
+            "margin-right": "8px",
+            "flex-shrink": 0,
+        },
+    )
+
+
+def _greeting_bubble():
+    return html.Div(
+        className="chat-message bot",
+        style={"display": "flex", "margin-bottom": "8px"},
+        children=[
+            _bot_avatar(),
+            html.Div(
+                style={
+                    "backgroundColor": "white",
+                    "border-radius": "14px",
+                    "padding": "8px 12px",
+                    "box-shadow": "0 2px 6px rgba(0,0,0,0.06)",
+                    "font-size": "13px",
+                },
+                children=(
+                    "Bonjour 👋 Je suis SolarXBot. Pose-moi des questions sur les communes, "
+                    "l’ensoleillement, la consommation d’électricité ou le potentiel des panneaux "
+                    "solaires à Genève."
+                ),
+            ),
+        ],
+    )
+
+
+def _user_bubble(text: str):
+    return html.Div(
+        className="chat-message user",
+        style={
+            "display": "flex",
+            "justifyContent": "flex-end",
+            "margin-bottom": "8px",
+        },
+        children=[
+            html.Div(
+                style={
+                    "maxWidth": "80%",
+                    "background": "linear-gradient(135deg, #005DFF, #2F9BFF)",
+                    "color": "white",
+                    "border-radius": "14px",
+                    "padding": "8px 12px",
+                    "font-size": "13px",
+                    "box-shadow": "0 2px 6px rgba(0,0,0,0.12)",
+                },
+                children=html.Div(text or "", style={"whiteSpace": "pre-wrap"}),
+            )
+        ],
+    )
+
+
+def _zone_card(zone_info: dict):
+    """Petit lien cliquable 'voir la carte' vers la page correcte + coords."""
+    if not zone_info or not isinstance(zone_info, dict) or not zone_info.get("name"):
+        return None
+
+    zone_label = zone_info.get("name")
+    page = (zone_info.get("page") or "").strip().lower()
+    # Routes Dash
+    route_map = {
+        "electricite": "/electricite",
+        "consommation": "/electricite",
+        "optimisation": "/optimisation",
+        "production": "/production",
+        "ensoleillement": "/ensoleillement",
+        "temperature": "/temperature",
+        "precipitation": "/precipitation",
+        "zones-industrielles": "/zones-industrielles",
+        "zones_industrielles": "/zones-industrielles",
+    }
+    href = route_map.get(page, "/electricite")
+
+    # Ajouter coords dans l'URL si dispo
+    if zone_info.get("lat") is not None and zone_info.get("lon") is not None:
+        try:
+            lat = float(zone_info.get("lat"))
+            lon = float(zone_info.get("lon"))
+            zoom = int(zone_info.get("zoom") or 14)
+            from urllib.parse import urlencode
+            href = f"{href}?" + urlencode({
+                "lat": f"{lat:.6f}",
+                "lon": f"{lon:.6f}",
+                "zoom": str(zoom),
+                "name": str(zone_label),
+            })
+        except Exception:
+            pass
+
+    return html.Div(
+        style={"margin-bottom": "6px"},
+        children=html.A(
+            f"📍 Voir la carte pour {zone_label}",
+            href=href,
+            style={
+                "display": "inline-block",
+                "padding": "6px 10px",
+                "borderRadius": "12px",
+                "background": "#EAF3FF",
+                "color": "#005DFF",
+                "fontSize": "12px",
+                "fontWeight": "600",
+                "textDecoration": "none",
+            },
+        ),
+    )
+
+
+
+def _bot_bubble(text: str, zone_info=None, suggestions: Optional[list[dict]] = None):
+    bot_children = []
+    z = _zone_card(zone_info)
+    if z is not None:
+        bot_children.append(z)
+
+    bot_children.append(html.Div(text or "", style={"whiteSpace": "pre-wrap"}))
+
+    # Si lat/lon disponibles → afficher dans la bulle (utile)
+    if zone_info and isinstance(zone_info, dict) and zone_info.get("lat") is not None and zone_info.get("lon") is not None:
+        bot_children.append(
+            html.Div(
+                f"🧭 Coordonnées: lat={zone_info.get('lat')}, lon={zone_info.get('lon')}",
+                style={"marginTop": "6px", "fontSize": "11px", "opacity": 0.75},
+            )
+        )
+
+    # Suggestions dynamiques (boutons cliquables)
+    if suggestions and isinstance(suggestions, list):
+        btns = []
+        for i, s in enumerate(suggestions[:5]):
+            if not isinstance(s, dict):
+                continue
+            label = str(s.get('label') or '').strip()
+            query = str(s.get('query') or label).strip()
+            if not label or not query:
+                continue
+            btns.append(
+                html.Button(
+                    label,
+                    id={"type": "chat-suggestion-btn", "index": query},
+                    n_clicks=0,
+                    style={
+                        "border": "1px solid #dbe6ff",
+                        "background": "#f3f7ff",
+                        "color": "#005DFF",
+                        "borderRadius": "999px",
+                        "padding": "6px 10px",
+                        "fontSize": "12px",
+                        "cursor": "pointer",
+                        "marginRight": "6px",
+                        "marginTop": "6px",
+                    },
+                )
+            )
+        if btns:
+            bot_children.append(
+                html.Div(
+                    btns,
+                    style={"display": "flex", "flexWrap": "wrap", "gap": "6px", "marginTop": "6px"},
+                )
+            )
+
+    return html.Div(
+        className="chat-message bot",
+        style={
+            "display": "flex",
+            "alignItems": "flex-start",
+            "margin-bottom": "8px",
+        },
+        children=[
+            _bot_avatar(),
+            html.Div(
+                style={
+                    "maxWidth": "80%",
+                    "backgroundColor": "white",
+                    "border-radius": "14px",
+                    "padding": "8px 12px",
+                    "font-size": "13px",
+                    "box-shadow": "0 2px 6px rgba(0,0,0,0.06)",
+                },
+                children=bot_children,
+            ),
+        ],
+    )
+
+
+def _render_history(messages: list[dict]) -> list:
+    """messages: [{'role':'user'|'model', 'text':...}, ...]"""
+    children = [_greeting_bubble()]
+    for m in messages or []:
+        role = m.get("role")
+        text = m.get("text", "")
+        meta = m.get("metadata") or {}
+        zone = meta.get("zone_info") if isinstance(meta, dict) else None
+        sugg = meta.get("suggestions") if isinstance(meta, dict) else None
+        if role == "user":
+            children.append(_user_bubble(text))
+        else:
+            children.append(_bot_bubble(text, zone_info=zone if isinstance(zone, dict) else None, suggestions=sugg if isinstance(sugg, list) else None))
+    return children
+
+
+def _safe_decode_upload(contents: str | None):
+    if not contents:
+        return None, None, None
+    try:
+        header, b64data = contents.split(",", 1)
+        mime = header.split(";")[0].split(":")[1]
+        raw = base64.b64decode(b64data)
+        return raw, mime, contents
+    except Exception:
+        return None, None, None
 
 
 def get_chatbot_layout():
@@ -10,8 +273,7 @@ def get_chatbot_layout():
     Composants globaux du chatbot :
     - Bulle flottante en bas à droite
     - Fenêtre de discussion (hidden au début)
-    - Stores pour l'historique, l'image et l'action carte
-    À inclure UNE FOIS dans app.layout pour être présent sur toutes les pages.
+    - Stores : historique, image, action carte, sessions
     """
     return html.Div(
         [
@@ -46,13 +308,13 @@ def get_chatbot_layout():
                     "position": "fixed",
                     "bottom": "100px",
                     "right": "24px",
-                    "width": "520px",      # plus large
-                    "height": "80vh",      # hauteur relative à l'écran
-                    "maxHeight": "820px",  # limite max
+                    "width": "520px",
+                    "height": "80vh",
+                    "maxHeight": "820px",
                     "backgroundColor": "#ffffff",
                     "border-radius": "18px",
                     "box-shadow": "0 16px 40px rgba(0, 0, 0, 0.30)",
-                    "display": "none",     # caché par défaut
+                    "display": "none",
                     "flexDirection": "column",
                     "overflow": "hidden",
                     "zIndex": 9998,
@@ -89,125 +351,145 @@ def get_chatbot_layout():
                                         children=[
                                             html.Div(
                                                 "SolarXBot",
-                                                style={
-                                                    "font-weight": "600",
-                                                    "font-size": "16px",
-                                                },
+                                                style={"font-weight": "600", "font-size": "16px"},
                                             ),
                                             html.Div(
                                                 "Assistant IA pour vos données solaires à Genève",
-                                                style={
-                                                    "font-size": "11px",
-                                                    "opacity": 0.9,
-                                                },
+                                                style={"font-size": "11px", "opacity": 0.9},
                                             ),
                                         ]
                                     ),
                                 ],
                             ),
-                            html.Button(
-                                "✕",
-                                id="chatbot-close-btn",
-                                n_clicks=0,
-                                style={
-                                    "border": "none",
-                                    "background": "transparent",
-                                    "color": "white",
-                                    "font-size": "18px",
-                                    "cursor": "pointer",
-                                },
+
+                            # Actions header (menu + close)
+                            html.Div(
+                                style={"display": "flex", "gap": "10px", "alignItems": "center"},
+                                children=[
+                                    html.Button(
+                                        "☰",
+                                        id="chatbot-menu-btn",
+                                        n_clicks=0,
+                                        style={
+                                            "border": "none",
+                                            "background": "rgba(255,255,255,0.12)",
+                                            "color": "white",
+                                            "font-size": "16px",
+                                            "cursor": "pointer",
+                                            "borderRadius": "10px",
+                                            "padding": "6px 10px",
+                                        },
+                                        title="Historique",
+                                    ),
+                                    html.Button(
+                                        "✕",
+                                        id="chatbot-close-btn",
+                                        n_clicks=0,
+                                        style={
+                                            "border": "none",
+                                            "background": "transparent",
+                                            "color": "white",
+                                            "font-size": "18px",
+                                            "cursor": "pointer",
+                                        },
+                                        title="Fermer",
+                                    ),
+                                ],
                             ),
                         ],
                     ),
 
-                    # 📨 Zone des messages (scrollable) + bulle de "typing"
+                    # 🧾 Sidebar historique (overlay)
+                    html.Div(
+                        id="chatbot-sidebar",
+                        style={
+                            "position": "absolute",
+                            "top": 0,
+                            "left": 0,
+                            "height": "100%",
+                            "width": "260px",
+                            "background": "#ffffff",
+                            "borderRight": "1px solid #e0e3ec",
+                            "boxShadow": "6px 0 18px rgba(0,0,0,0.12)",
+                            "transform": "translateX(-110%)",
+                            "transition": "transform 160ms ease",
+                            "zIndex": 10000,
+                            "display": "flex",
+                            "flexDirection": "column",
+                        },
+                        children=[
+                            html.Div(
+                                style={
+                                    "padding": "10px 10px",
+                                    "borderBottom": "1px solid #eef1f7",
+                                    "background": "#f7f9ff",
+                                },
+                                children=[
+                                    html.Div(
+                                        "Conversations",
+                                        style={"fontWeight": "700", "fontSize": "13px", "marginBottom": "6px"},
+                                    ),
+                                    html.Button(
+                                        "➕ Nouveau chat",
+                                        id="chat-new-chat-btn",
+                                        n_clicks=0,
+                                        style={
+                                            "width": "100%",
+                                            "border": "none",
+                                            "borderRadius": "10px",
+                                            "padding": "8px 10px",
+                                            "background": "linear-gradient(135deg, #005DFF, #2F9BFF)",
+                                            "color": "white",
+                                            "fontWeight": "700",
+                                            "cursor": "pointer",
+                                            "fontSize": "12px",
+                                        },
+                                    ),
+                                ],
+                            ),
+                            html.Div(
+                                id="chat-sessions-list",
+                                style={"padding": "10px", "overflowY": "auto", "flex": "1"},
+                            ),
+                            html.Div(
+                                style={"padding": "10px", "borderTop": "1px solid #eef1f7", "fontSize": "11px", "opacity": 0.75},
+                                children="Astuce: clique sur une conversation pour la recharger.",
+                            ),
+                        ],
+                    ),
+
+                    # 📨 Zone des messages + loader
                     html.Div(
                         style={
                             "flex": "1",
                             "display": "flex",
                             "flexDirection": "column",
                             "background": "#f5f7fb",
-                            "minHeight": 0,  # IMPORTANT pour le scroll dans un flex
+                            "minHeight": 0,
+                            "position": "relative",
                         },
                         children=[
-                            # Historique scrollable (flex:1)
                             html.Div(
                                 id="chat-history",
-                                style={
-                                    "padding": "12px 14px",
-                                    "overflowY": "auto",
-                                    "flex": "1",
-                                    "minHeight": 0,  # IMPORTANT pour autoriser le scroll
-                                },
-                                children=[
-                                    html.Div(
-                                        className="chat-message bot",
-                                        style={
-                                            "display": "flex",
-                                            "margin-bottom": "8px",
-                                        },
-                                        children=[
-                                            html.Div(
-                                                "🤖",
-                                                style={
-                                                    "width": "28px",
-                                                    "height": "28px",
-                                                    "border-radius": "50%",
-                                                    "backgroundColor": "#005DFF",
-                                                    "color": "white",
-                                                    "display": "flex",
-                                                    "alignItems": "center",
-                                                    "justifyContent": "center",
-                                                    "font-size": "16px",
-                                                    "margin-right": "8px",
-                                                    "flex-shrink": 0,
-                                                },
-                                            ),
-                                            html.Div(
-                                                style={
-                                                    "backgroundColor": "white",
-                                                    "border-radius": "14px",
-                                                    "padding": "8px 12px",
-                                                    "box-shadow": "0 2px 6px rgba(0,0,0,0.06)",
-                                                    "font-size": "13px",
-                                                },
-                                                children=(
-                                                    "Bonjour 👋 Je suis SolarXBot. Pose-moi des questions sur les communes, "
-                                                    "l’ensoleillement, la consommation d’électricité ou le potentiel des panneaux "
-                                                    "solaires à Genève."
-                                                ),
-                                            ),
-                                        ],
-                                    )
-                                ],
+                                style={"padding": "12px 14px", "overflowY": "auto", "flex": "1", "minHeight": 0},
+                                children=[_greeting_bubble()],
                             ),
-                            # Bulle "SolarXBot est en train d'écrire..." avec 3 points animés
                             html.Div(
                                 id="typing-container",
-                                style={
-                                    "minHeight": "28px",
-                                    "padding": "0 14px 6px 14px",
-                                },
+                                style={"minHeight": "28px", "padding": "0 14px 6px 14px"},
                                 children=dcc.Loading(
                                     id="chat-typing-loader",
-                                    type="dots",      # animation 3 points
+                                    type="dots",
                                     fullscreen=False,
-                                    children=html.Div(
-                                        id="typing-placeholder",
-                                        style={},
-                                    ),
+                                    children=html.Div(id="typing-placeholder", style={}),
                                 ),
                             ),
                         ],
                     ),
 
-                    # ⌨️ Barre d'entrée + upload + prévisualisation image
+                    # ⌨️ Barre d'entrée + upload + preview
                     html.Div(
-                        style={
-                            "border-top": "1px solid #e0e3ec",
-                            "padding": "8px 10px",
-                            "backgroundColor": "#ffffff",
-                        },
+                        style={"border-top": "1px solid #e0e3ec", "padding": "8px 10px", "backgroundColor": "#ffffff"},
                         children=[
                             dcc.Upload(
                                 id="chat-image-upload",
@@ -223,21 +505,10 @@ def get_chatbot_layout():
                                 },
                                 multiple=False,
                             ),
-                            # 🖼️ Prévisualisation de l'image dans la zone d'input
+                            html.Div(id="chat-image-preview", style={"marginBottom": "6px"}),
                             html.Div(
-                                id="chat-image-preview",
-                                style={
-                                    "marginBottom": "6px",
-                                },
-                            ),
-                            html.Div(
-                                style={
-                                    "display": "flex",
-                                    "gap": "6px",
-                                    "alignItems": "flex-end",
-                                },
+                                style={"display": "flex", "gap": "6px", "alignItems": "flex-end"},
                                 children=[
-                                    # dcc.Input pour pouvoir utiliser Enter (n_submit)
                                     dcc.Input(
                                         id="chat-input",
                                         type="text",
@@ -271,17 +542,17 @@ def get_chatbot_layout():
                                     ),
                                 ],
                             ),
-                            html.Div(
-                                id="chat-error",
-                                style={"color": "#e74c3c", "font-size": "11px", "margin-top": "4px"},
-                            ),
+                            html.Div(id="chat-error", style={"color": "#e74c3c", "font-size": "11px", "margin-top": "4px"}),
                         ],
                     ),
 
-                    # 🧠 Stores internes
+                    # Stores
                     dcc.Store(id="chat-store", data=[]),
                     dcc.Store(id="chat-image-bytes"),
                     dcc.Store(id="chat-map-action"),
+                    dcc.Store(id="chat-session-id"),
+                    dcc.Store(id="chat-sessions", data=[]),
+                    dcc.Store(id="chat-sidebar-open", data=False),
                 ],
             ),
         ]
@@ -289,15 +560,7 @@ def get_chatbot_layout():
 
 
 def register_chatbot_callbacks(app: dash.Dash):
-    """
-    Enregistre :
-    - le callback d'ouverture/fermeture de la fenêtre
-    - le callback unique qui gère :
-        * la prévisualisation image
-        * l'envoi de message (Gemini + SQL + zone)
-    """
-
-    # 1️⃣ Toggle ouverture / fermeture de la fenêtre
+    # 1) Toggle ouverture/fermeture fenêtre
     @app.callback(
         Output("chatbot-window", "style"),
         Input("chatbot-toggle-btn", "n_clicks"),
@@ -310,7 +573,6 @@ def register_chatbot_callbacks(app: dash.Dash):
         ctx = dash.callback_context
         trigger = ctx.triggered[0]["prop_id"].split(".")[0]
 
-        # Style de base de la fenêtre
         base_style = {
             "position": "fixed",
             "bottom": "100px",
@@ -326,23 +588,30 @@ def register_chatbot_callbacks(app: dash.Dash):
             "zIndex": 9998,
         }
 
-        # Fermeture explicite
         if trigger == "chatbot-close-btn":
             base_style["display"] = "none"
             return base_style
 
-        # Ouverture / fermeture via la bulle
         current_display = style.get("display", "none")
-        if current_display == "none":
-            base_style["display"] = "flex"
-        else:
-            base_style["display"] = "none"
-
+        base_style["display"] = "flex" if current_display == "none" else "none"
         return base_style
 
-    # 2️⃣ Callback unique :
-    #   - upload image → mettre à jour prévisualisation SANS envoyer de message
-    #   - Enter ou bouton Envoyer → envoyer message + image si présente
+    # 2) Sidebar toggle
+    @app.callback(
+        [Output("chatbot-sidebar", "style"), Output("chat-sidebar-open", "data")],
+        Input("chatbot-menu-btn", "n_clicks"),
+        State("chat-sidebar-open", "data"),
+        State("chatbot-sidebar", "style"),
+        prevent_initial_call=True,
+    )
+    def toggle_sidebar(n, is_open, current_style):
+        is_open = bool(is_open)
+        new_open = not is_open
+        style = dict(current_style or {})
+        style["transform"] = "translateX(0%)" if new_open else "translateX(-110%)"
+        return style, new_open
+
+    # 3) Callback unique: upload, send, new chat, switch session
     @app.callback(
         [
             Output("chat-history", "children"),
@@ -353,302 +622,376 @@ def register_chatbot_callbacks(app: dash.Dash):
             Output("chat-input", "value"),
             Output("chat-image-preview", "children"),
             Output("chat-map-action", "data"),
+            Output("chat-session-id", "data"),
+            Output("chat-sessions", "data"),
+            Output("chat-sessions-list", "children"),
         ],
         [
             Input("chat-send-btn", "n_clicks"),
-            Input("chat-input", "n_submit"),          # Enter dans le champ input
-            Input("chat-image-upload", "contents"),   # upload image → prévisualisation
+            Input("chat-input", "n_submit"),
+            Input("chat-image-upload", "contents"),
+            Input("chat-new-chat-btn", "n_clicks"),
+            Input({"type": "chat-session-btn", "index": ALL}, "n_clicks"),
+            Input({"type": "chat-suggestion-btn", "index": ALL}, "n_clicks"),
         ],
         [
             State("chat-input", "value"),
             State("chat-store", "data"),
             State("chat-history", "children"),
             State("chat-image-bytes", "data"),
+            State("chat-session-id", "data"),
+            State("chat-sessions", "data"),
         ],
         prevent_initial_call=True,
     )
-    def handle_chat(
-        n_clicks,
+    def main_chat_callback(
+        n_send,
         n_submit,
-        image_contents,
+        upload_contents,
+        n_new_chat,
+        session_btn_clicks,
+        suggestion_btn_clicks,
         user_text,
         history,
         current_messages,
-        image_bytes_b64,
+        image_bytes_store,
+        session_id,
+        sessions_store,
     ):
         ctx = dash.callback_context
-        if not ctx.triggered:
-            return (
-                no_update,
-                no_update,
-                no_update,
-                no_update,
-                "",
-                no_update,
-                no_update,
-                no_update,
-            )
-
-        trigger = ctx.triggered[0]["prop_id"].split(".")[0]
-
-        # 🖼️ CAS 1 : l'utilisateur vient d'uploader une image → prévisualiser uniquement
-        if trigger == "chat-image-upload":
-            if not image_contents:
-                # effacer la preview si rien
-                return (
-                    no_update,   # chat-history
-                    no_update,   # chat-store
-                    "",          # pas d'erreur
-                    image_bytes_b64,   # on garde la dernière image bytes
-                    "",          # typing-placeholder
-                    user_text,   # on garde le texte éventuel
-                    "",          # preview vidée
-                    no_update,   # chat-map-action
-                )
-            # mettre à jour la prévisualisation
-            preview = html.Img(
-                src=image_contents,
-                style={
-                    "maxWidth": "120px",
-                    "maxHeight": "100px",
-                    "borderRadius": "10px",
-                    "boxShadow": "0 2px 6px rgba(0,0,0,0.15)",
-                },
-            )
-            # on stocke aussi les bytes pour le backend (si besoin plus tard)
-            try:
-                content_type, content_string = image_contents.split(",")
-                _ = content_type
-                new_image_bytes_b64 = content_string
-            except Exception:
-                new_image_bytes_b64 = None
-
-            return (
-                no_update,
-                no_update,
-                "",
-                new_image_bytes_b64 if new_image_bytes_b64 else image_bytes_b64,
-                "",
-                user_text,
-                preview,
-                no_update,
-            )
-
-        # 📨 CAS 2 : envoi de message (bouton ou Enter)
-        # Si pas de texte → message d'erreur
-        if not user_text or str(user_text).strip() == "":
-            return (
-                no_update,
-                no_update,
-                "Merci d'écrire une question.",
-                image_bytes_b64,
-                "",
-                user_text,  # on laisse ce qu'il y a dans le champ
-                no_update,
-                no_update,
-            )
+        trigger = ctx.triggered[0]["prop_id"].split(".")[0] if ctx.triggered else ""
 
         history = history or []
-        current_messages = current_messages or []
+        current_messages = current_messages or [_greeting_bubble()]
+        sessions_store = sessions_store or []
 
-        # 🔍 Décodage image pour Gemini (backend)
-        image_bytes = None
-        mime_type = "image/jpeg"
-        if image_contents:
+        mem = get_memory_service() if get_memory_service is not None else None
+
+        # Helper: refresh sessions
+        def _refresh_sessions():
+            if not mem:
+                return sessions_store
             try:
-                content_type, content_string = image_contents.split(",")
-                if ";" in content_type:
-                    mime_type = content_type.split(":")[1].split(";")[0]
-                image_bytes = base64.b64decode(content_string)
+                return mem.get_all_sessions(limit=30)
             except Exception:
-                image_bytes = None
-        elif image_bytes_b64:
-            try:
-                image_bytes = base64.b64decode(image_bytes_b64)
-            except Exception:
-                image_bytes = None
+                return sessions_store
 
-        # Ajout question utilisateur à l'historique "logique"
-        history.append({"role": "user", "text": user_text})
-
-        # 💬 Contenu de la bulle utilisateur (texte + éventuelle image envoyée)
-        user_bubble_inner = []
-
-        # Texte
-        user_bubble_inner.append(
-            html.Div(
-                user_text,
-                style={
-                    "margin-bottom": "4px",
-                    "whiteSpace": "pre-wrap",
-                },
-            )
-        )
-
-        # Miniature de l'image DANS la bulle (une fois envoyée)
-        if image_contents:
-            user_bubble_inner.append(
-                html.Img(
-                    src=image_contents,
-                    style={
-                        "maxWidth": "140px",
-                        "maxHeight": "120px",
-                        "borderRadius": "10px",
-                        "marginTop": "4px",
-                        "marginBottom": "2px",
-                        "boxShadow": "0 2px 6px rgba(0,0,0,0.15)",
-                    },
-                )
-            )
-
-        # Bulle UI utilisateur
-        current_messages.append(
-            html.Div(
-                className="chat-message user",
-                style={
-                    "display": "flex",
-                    "justifyContent": "flex-end",
-                    "margin-bottom": "8px",
-                },
-                children=[
-                    html.Div(
+        # Helper: render sessions list UI
+        def _render_sessions_list(sessions, active_id):
+            items = []
+            for s in sessions or []:
+                sid = s.get("session_id")
+                title = s.get("title") or "Conversation"
+                cnt = int(s.get("message_count") or 0)
+                is_active = (sid == active_id)
+                items.append(
+                    html.Button(
+                        [
+                            html.Div(title, style={"fontWeight": "700", "fontSize": "12px", "lineHeight": "1.2"}),
+                            html.Div(f"{cnt} messages", style={"fontSize": "11px", "opacity": 0.75}),
+                        ],
+                        id={"type": "chat-session-btn", "index": sid},
+                        n_clicks=0,
                         style={
-                            "maxWidth": "80%",
-                            "background": "linear-gradient(135deg, #005DFF, #2F9BFF)",
-                            "color": "white",
-                            "border-radius": "14px",
-                            "padding": "8px 12px",
-                            "font-size": "13px",
-                            "box-shadow": "0 2px 6px rgba(0,0,0,0.12)",
+                            "width": "100%",
+                            "textAlign": "left",
+                            "border": "1px solid #e8ecf6",
+                            "borderRadius": "12px",
+                            "padding": "10px 10px",
+                            "marginBottom": "8px",
+                            "background": "#EAF3FF" if is_active else "white",
+                            "cursor": "pointer",
                         },
-                        children=user_bubble_inner,
                     )
-                ],
-            )
-        )
+                )
+            if not items:
+                items = [html.Div("Aucune conversation pour le moment.", style={"fontSize": "12px", "opacity": 0.7})]
+            return items
 
-        # 🔁 Appel à Gemini + SQL via ton service backend
-        try:
-            bot_answer, zone_info = generate_chat_response(
-                history=history,
-                user_message=user_text,
-                image_bytes=image_bytes,
-                mime_type=mime_type,
-            )
-        except Exception as e:
-            # On garde l'historique, on vide l'image, on vide la preview, on vide le champ
+        # Ensure session exists
+        if not session_id and mem:
+            try:
+                session_id = mem.create_session()
+            except Exception:
+                session_id = None
+
+        # -------------------------
+        # Case: upload image -> preview only
+        # -------------------------
+        if trigger == "chat-image-upload":
+            raw, mime, preview_src = _safe_decode_upload(upload_contents)
+            if raw is None:
+                return (
+                    current_messages,
+                    history,
+                    "Image invalide (format non supporté).",
+                    None,
+                    "",
+                    no_update,
+                    "",
+                    no_update,
+                    session_id,
+                    sessions_store,
+                    _render_sessions_list(_refresh_sessions(), session_id),
+                )
+
+            # preview thumbnail
+            preview = html.Img(src=preview_src, style={"maxWidth": "100%", "borderRadius": "10px"})
             return (
                 current_messages,
                 history,
-                f"Erreur lors de l'appel à Gemini : {e}",
+                "",
+                raw,
+                "",
+                no_update,
+                preview,
+                no_update,
+                session_id,
+                sessions_store,
+                _render_sessions_list(_refresh_sessions(), session_id),
+            )
+
+        # -------------------------
+        # Case: new chat
+        # -------------------------
+        if trigger == "chat-new-chat-btn":
+            if mem:
+                try:
+                    session_id = mem.create_session()
+                except Exception:
+                    session_id = None
+            # reset UI
+            sessions_store = _refresh_sessions()
+            return (
+                [_greeting_bubble()],
+                [],
+                "",
+                None,
+                "",
+                "",
+                "",
+                None,
+                session_id,
+                sessions_store,
+                _render_sessions_list(sessions_store, session_id),
+            )
+
+        # -------------------------
+        # Case: switch session
+        # -------------------------
+        if trigger.startswith("{") and "chat-session-btn" in trigger:
+            try:
+                trig = json.loads(trigger)
+                target_sid = trig.get("index")
+            except Exception:
+                target_sid = None
+
+            if mem and target_sid:
+                sess = mem.get_session(target_sid)
+                if sess:
+                    # Convert stored messages into our lightweight history format
+                    msgs = []
+                    for m in sess.messages or []:
+                        role = m.get("role")
+                        text = m.get("text", "")
+                        meta = m.get("metadata") or {}
+                        # If metadata contains zone_info -> keep it
+                        msgs.append({"role": role, "text": text, "metadata": meta})
+                    sessions_store = _refresh_sessions()
+                    return (
+                        _render_history(msgs),
+                        [{"role": m["role"], "text": m["text"]} for m in msgs],
+                        "",
+                        None,
+                        "",
+                        "",
+                        "",
+                        None,
+                        target_sid,
+                        sessions_store,
+                        _render_sessions_list(sessions_store, target_sid),
+                    )
+
+            # fallback: no change
+            return (
+                current_messages,
+                history,
+                "",
+                None,
+                "",
+                no_update,
+                no_update,
+                no_update,
+                session_id,
+                sessions_store,
+                _render_sessions_list(_refresh_sessions(), session_id),
+            )
+
+        # -------------------------
+        # Case: click suggestion button
+        # -------------------------
+        if trigger.startswith("{") and "chat-suggestion-btn" in trigger:
+            try:
+                trig = json.loads(trigger)
+                # Dash trigger id contains our dict; query is inside
+                # but Dash serializes dict keys as provided.
+                suggested_query = trig.get("index")
+            except Exception:
+                suggested_query = None
+
+            if suggested_query and str(suggested_query).strip():
+                user_text = str(suggested_query).strip()
+                # On continue comme si c'était un envoi
+                trigger = "chat-send-btn"
+            else:
+                return (
+                    current_messages,
+                    history,
+                    "Suggestion invalide.",
+                    image_bytes_store,
+                    "",
+                    no_update,
+                    no_update,
+                    no_update,
+                    session_id,
+                    sessions_store,
+                    _render_sessions_list(_refresh_sessions(), session_id),
+                )
+
+# -------------------------
+        # Case: send message (button or enter)
+        # -------------------------
+        if trigger not in ("chat-send-btn", "chat-input"):
+            # unknown trigger
+            return (
+                current_messages,
+                history,
+                "",
+                image_bytes_store,
+                "",
+                no_update,
+                no_update,
+                no_update,
+                session_id,
+                sessions_store,
+                _render_sessions_list(_refresh_sessions(), session_id),
+            )
+
+        if not user_text or not str(user_text).strip():
+            return (
+                current_messages,
+                history,
+                "Veuillez écrire un message.",
+                image_bytes_store,
+                "",
+                no_update,
+                no_update,
+                no_update,
+                session_id,
+                sessions_store,
+                _render_sessions_list(_refresh_sessions(), session_id),
+            )
+
+        user_text = str(user_text).strip()
+
+        # Persist user message
+        if mem and session_id:
+            try:
+                mem.add_message(session_id, "user", user_text, metadata={})
+            except Exception:
+                pass
+
+        # Add user bubble
+        current_messages = list(current_messages)
+        current_messages.append(_user_bubble(user_text))
+
+        # Call backend
+        mime_type = "image/jpeg"
+        bot_answer = ""
+        zone_info = None
+        suggestions = []
+        try:
+            bot_answer, zone_info, suggestions = generate_chat_response(
+                history=history,
+                user_message=user_text,
+                image_bytes=image_bytes_store,
+                mime_type=mime_type,
+            )
+        except Exception as e:
+            return (
+                current_messages,
+                history,
+                f"Erreur lors de l'appel au service IA : {e}",
                 None,
                 "",
                 "",
                 "",
                 no_update,
+                session_id,
+                _refresh_sessions(),
+                _render_sessions_list(_refresh_sessions(), session_id),
             )
 
-        # Ajout réponse bot dans l'historique logique
+        # Add bot message to store history
+        history = list(history)
+        history.append({"role": "user", "text": user_text})
         history.append({"role": "model", "text": bot_answer})
 
-        # 🧭 Optionnel : petite carte/bouton au-dessus de la réponse si zone détectée
-        bot_children = []
+        # Map payload (compatible + enrichi)
         map_action_payload = None
-
-        if zone_info and isinstance(zone_info, dict) and zone_info.get("name"):
-            zone_label = zone_info.get("name")
-            # On prépare la donnée pour la carte (commune ou point)
+        # On déclenche une action carte dès qu'on a (page) OU (coords) OU (nom).
+        # Ça évite le cas où le bot détecte le thème/coords mais n'a pas "name".
+        if zone_info and isinstance(zone_info, dict) and (
+            zone_info.get("page")
+            or (zone_info.get("lat") is not None and zone_info.get("lon") is not None)
+            or zone_info.get("name")
+        ):
             map_action_payload = {
                 "type": zone_info.get("type"),
                 "name": zone_info.get("name"),
                 "idpoint": zone_info.get("idpoint"),
             }
 
-            # Petite "card" cliquable qui renvoie vers la page de carte
-            bot_children.append(
-                html.Div(
-                    style={
-                        "margin-bottom": "6px",
-                    },
-                    children=html.A(
-                        f"📍 Voir la carte pour {zone_label}",
-                        href="/electricite",   # à adapter si ta page carte a un autre pathname
-                        style={
-                            "display": "inline-block",
-                            "padding": "6px 10px",
-                            "borderRadius": "12px",
-                            "background": "#EAF3FF",
-                            "color": "#005DFF",
-                            "fontSize": "12px",
-                            "fontWeight": "600",
-                            "textDecoration": "none",
-                        },
-                    ),
-                )
-            )
+            # ✅ Page / layer (pour router vers la bonne carte)
+            if zone_info.get("page"):
+                map_action_payload["page"] = zone_info.get("page")
+            if zone_info.get("layer"):
+                map_action_payload["layer"] = zone_info.get("layer")
 
-        # Puis le texte de la réponse
-        bot_children.append(
-            html.Div(
-                bot_answer,
-                style={
-                    "whiteSpace": "pre-wrap",
-                },
-            )
-        )
+            # Enrich coords (dashboard peut ignorer si non utilisé)
+            if zone_info.get("lat") is not None and zone_info.get("lon") is not None:
+                map_action_payload["lat"] = zone_info.get("lat")
+                map_action_payload["lon"] = zone_info.get("lon")
+                map_action_payload["zoom"] = zone_info.get("zoom", 14)
 
-        # Bulle UI bot
-        current_messages.append(
-            html.Div(
-                className="chat-message bot",
-                style={
-                    "display": "flex",
-                    "alignItems": "flex-start",
-                    "margin-bottom": "8px",
-                },
-                children=[
-                    html.Div(
-                        "🤖",
-                        style={
-                            "width": "28px",
-                            "height": "28px",
-                            "border-radius": "50%",
-                            "backgroundColor": "#005DFF",
-                            "color": "white",
-                            "display": "flex",
-                            "alignItems": "center",
-                            "justifyContent": "center",
-                            "font-size": "16px",
-                            "margin-right": "8px",
-                            "flex-shrink": 0,
-                        },
-                    ),
-                    html.Div(
-                        style={
-                            "maxWidth": "80%",
-                            "backgroundColor": "white",
-                            "border-radius": "14px",
-                            "padding": "8px 12px",
-                            "font-size": "13px",
-                            "box-shadow": "0 2px 6px rgba(0,0,0,0.06)",
-                        },
-                        children=bot_children,
-                    ),
-                ],
-            )
-        )
+        # Persist bot message + metadata
+        if mem and session_id:
+            try:
+                meta = {}
+                if zone_info:
+                    meta["zone_info"] = zone_info
+                if suggestions:
+                    meta["suggestions"] = suggestions
+                mem.add_message(session_id, "model", bot_answer, metadata=meta)
+            except Exception:
+                pass
 
-        # 🔚 Après envoi :
-        # - on nettoie l'image backend (image-bytes)
-        # - on vide le champ de texte
-        # - on efface la prévisualisation
+        current_messages.append(_bot_bubble(bot_answer, zone_info=zone_info, suggestions=suggestions))
+
+        sessions_store = _refresh_sessions()
+        sessions_list_children = _render_sessions_list(sessions_store, session_id)
+
+        # Reset image & input & preview
         return (
             current_messages,
             history,
             "",
-            None,   # reset image_bytes
+            None,
             "",
-            "",     # vider l'input
-            "",     # enlever la preview
-            map_action_payload,  # info pour la carte (ou None)
+            "",
+            "",
+            map_action_payload,
+            session_id,
+            sessions_store,
+            sessions_list_children,
         )

@@ -26,6 +26,7 @@ from layouts.ia_prediction import predict_future_production
 
 
 from flask import request, jsonify
+from callbacks.chat_map_callbacks import register_chat_map_callbacks
 from metrics import metrics_endpoint, track_page_view, update_zones_count
 
 initialize_default_data()
@@ -626,7 +627,7 @@ vertical_header = html.Div(
                 html.A(
                     children=[
                         html.Img(
-                            src="assets/img/sun.png",  # Icône pour Optimisation
+                            src="assets/img/goal.png",  # Icône pour Optimisation
                             style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
                         ),
                         html.Span(
@@ -1277,6 +1278,16 @@ def update_opt_top_points(threshold, points):
         )
 
     return cards, f"{int(threshold)} %"
+
+
+
+register_chat_map_callbacks(
+    app,
+    communes_geo_data=communes_geo_data,
+    df_communes=df,
+    commune_centroids=COMMUNE_CENTROIDS,
+)
+
 
 register_chatbot_callbacks(app)
 register_prediction_callbacks(app)
