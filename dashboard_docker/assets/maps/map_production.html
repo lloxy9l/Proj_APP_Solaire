@@ -199,6 +199,9 @@
       INITIALISATION MAP
    ============================= */
 const map = L.map('map').setView([46.2044, 6.1432], 9);
+
+
+window.map = map;
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
@@ -400,5 +403,6 @@ fetch("assets/maps/production_prediction.json")
     .catch(e => console.error("Erreur chargement JSON :", e));
 </script>
 
+    <script src="/assets/maps/map_bridge.js"></script>
 </body>
 </html>

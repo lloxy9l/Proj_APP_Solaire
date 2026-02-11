@@ -1,5 +1,6 @@
 import json
 import os
+from re import search
 import dash
 from dash import html, dcc, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
@@ -12,11 +13,14 @@ from chatbot_page import get_chatbot_layout, register_chatbot_callbacks
 from layouts.home import render_main_content
 from layouts.ensoleillement import render_ensoleillement
 from layouts.temperature import render_temperature
+from layouts.map_focus import render_map_focus
 from layouts.precipitations import render_precipitations
 from layouts.optimisation import render_optimisation
 from layouts.electricite import render_electricite
 from layouts.prediction import render_prediction, register_prediction_callbacks
-
+from layouts.map_focus import render_map_focus
+from flask import request, jsonify
+from services.chat_service import _find_point_by_name_like, _fetch_latest_metrics_for_point
 
 from dash import callback_context
 
@@ -63,6 +67,9 @@ with open('assets/maps/map_zones_industrielles.html', 'r') as file:
 with open('assets/maps/map_optimisation.html', 'r') as file:
     map_optimisation = file.read().replace("http://localhost:3000", node_base_url)
 
+with open("assets/maps/map_focus.html", "r") as file:
+    map_focus_html = file.read().replace("http://localhost:3000", node_base_url)
+
 
 ##########################################################################################################################################
 ##########################################################################################################################################
@@ -88,7 +95,7 @@ def fetch_data():
     conn.close()
     
     df = pd.DataFrame(data)
-    df["date_collecte"] = pd.to_datetime(df["date_collecte"])
+    df["date_collecte"] = pd.to_datetime(df["date_collecte"], format="mixed", errors="coerce")
     df[["temperature", "irradiance", "precipitation", "ensoleillement"]] = df[["temperature", "irradiance", "precipitation", "ensoleillement"]].apply(pd.to_numeric, errors='coerce')
     df["ensoleillement"] = df["ensoleillement"]/3600
     df["production"] = df["irradiance"] * 365 * 3
@@ -485,10 +492,19 @@ app = dash.Dash(
 server=app.server
 
 # ===== Endpoint Prometheus pour exposer les métriques =====
-@server.route('/metrics')
-def metrics():
-    """Endpoint pour Prometheus - expose les métriques de l'application"""
-    return metrics_endpoint()
+
+@server.route("/api/metrics")
+def api_metrics():
+    name = request.args.get("name", "").strip()
+    if not name:
+        return jsonify({}), 400
+
+    pt = _find_point_by_name_like(name)
+    if not pt or not pt.get("idpoint"):
+        return jsonify({}), 404
+
+    metrics = _fetch_latest_metrics_for_point(int(pt["idpoint"])) or {}
+    return jsonify(metrics)
 
 # @server.route("/updateRegion", methods=["POST"])
 # def update_region():
@@ -599,13 +615,6 @@ vertical_header = html.Div(
                 ),
                 html.A(
                     children=[
-                          html.Img(src="assets/img/inds.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
-                          html.Span("Zones Industrielles", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
-                        ],
-                      href="/zones-industrielles",
-                ),
-                html.A(
-                    children=[
                         html.Img(
                             src="assets/img/rain.png",  # Icône pour Paramètres
                             style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"},
@@ -641,6 +650,13 @@ vertical_header = html.Div(
                         ),
                     ],
                     href="/optimisation",
+                ),
+                html.A(
+                    children=[
+                          html.Img(src="assets/img/inds.png", style={"width": "40px", "margin": "20px 10px", "vertical-align": "middle"}),
+                          html.Span("Zones Industrielles", style={"margin-left": "10px", "font-size": "14px", "vertical-align": "middle", "display": "none"}),
+                        ],
+                      href="/zones-industrielles",
                 ),
                 html.A(
                     children=[
@@ -963,6 +979,8 @@ def display_content(pathname):
         return render_main_content(global_means=global_means, map_production=map_production)
     elif pathname == "/ensoleillement":
         return render_ensoleillement(df_mois=df_mois, fig_ens=fig_ens, map_ensoleillement=map_ensoleillement)
+    elif pathname == "/map-focus":
+        return render_map_focus(search)
     elif pathname == "/temperature":
         return render_temperature(df_mois=df_mois, fig_temp=fig_temp, map_temperature=map_temperature)
     elif pathname == "/precipitations":
@@ -1152,7 +1170,7 @@ def redirect_from_chat(chat_action):
     on bascule automatiquement vers la page /electricite.
     """
     if isinstance(chat_action, dict) and chat_action.get("type") == "commune":
-        return "/electricite"
+        return "/map-focus"
     return no_update
 
 

@@ -5,19 +5,13 @@ import uuid
 import dash
 from dash import html, dcc, Input, Output, State, no_update
 from dash.dependencies import ALL
+import dash_bootstrap_components as dbc
 
 from services.chat_service import generate_chat_response
-
-# Soft import (le chatbot fonctionne même si le service mémoire n'est pas dispo)
 try:
     from services.memory_service import get_memory_service
 except Exception:  # pragma: no cover
     get_memory_service = None
-
-
-# ------------------------------------------------------------
-# UI helpers
-# ------------------------------------------------------------
 
 def _bot_avatar():
     return html.Div(
@@ -105,7 +99,7 @@ def _user_bubble(text: str):
         ],
     )
 
-
+# redirection vers la carte dyal dak sujet fhal temp, precipi, ... avec les coords si dispo
 def _zone_card(zone_info: dict):
     """Petit lien cliquable 'voir la carte' vers la page correcte + coords."""
     if not zone_info or not isinstance(zone_info, dict) or not zone_info.get("name"):
@@ -123,9 +117,8 @@ def _zone_card(zone_info: dict):
         "temperature": "/temperature",
         "precipitation": "/precipitation",
         "zones-industrielles": "/zones-industrielles",
-        "zones_industrielles": "/zones-industrielles",
     }
-    href = route_map.get(page, "/electricite")
+    href = route_map.get(page, "/optimisation")
 
     # Ajouter coords dans l'URL si dispo
     if zone_info.get("lat") is not None and zone_info.get("lon") is not None:
@@ -160,7 +153,6 @@ def _zone_card(zone_info: dict):
             },
         ),
     )
-
 
 
 def _bot_bubble(text: str, zone_info=None, suggestions: Optional[list[dict]] = None):
@@ -487,21 +479,31 @@ def get_chatbot_layout():
                         ],
                     ),
 
-                    # ⌨️ Barre d'entrée + upload + preview
+                    
+# ⌨️ Barre d'entrée + upload + preview
                     html.Div(
                         style={"border-top": "1px solid #e0e3ec", "padding": "8px 10px", "backgroundColor": "#ffffff"},
                         children=[
                             dcc.Upload(
                                 id="chat-image-upload",
-                                children=html.Div("📷 Ajouter une image (optionnel)"),
+                                children=html.Div(
+                                    "🖼️",
+                                    title="Ajouter une image",
+                                    style={
+                                        "font-size": "18px",
+                                        "cursor": "pointer",
+                                        "user-select": "none",
+                                    },
+                                ),
                                 style={
-                                    "border": "1px dashed #b3c4ff",
+                                    "width": "40px",
+                                    "height": "40px",
+                                    "display": "flex",
+                                    "align-items": "center",
+                                    "justify-content": "center",
+                                    "border": "1px solid #d0d4e6",
                                     "border-radius": "10px",
-                                    "padding": "4px 8px",
-                                    "cursor": "pointer",
                                     "background-color": "#f3f6ff",
-                                    "font-size": "11px",
-                                    "margin-bottom": "4px",
                                 },
                                 multiple=False,
                             ),
@@ -555,6 +557,51 @@ def get_chatbot_layout():
                     dcc.Store(id="chat-sidebar-open", data=False),
                 ],
             ),
+            # =========================
+            # MODAL : Carte & Indicateurs
+            # =========================
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        [
+                            dbc.ModalTitle("Carte & Indicateurs"),
+                            html.Button(
+                                "✕",
+                                id="map-modal-close",
+                                n_clicks=0,
+                                style={
+                                    "marginLeft": "auto",
+                                    "border": "none",
+                                    "background": "transparent",
+                                    "fontSize": "18px",
+                                    "cursor": "pointer",
+                                },
+                            ),
+                        ],
+                        style={"display": "flex", "alignItems": "center"},
+                    ),
+                    dbc.ModalBody(
+                        html.Iframe(
+                            id="map-modal-iframe",
+                            src="",
+                            style={
+                                "width": "100%",
+                                "height": "80vh",
+                                "border": "0",
+                                "borderRadius": "12px",
+                            },
+                        ),
+                        style={"padding": "0"},
+                    ),
+                ],
+                id="map-modal",
+                is_open=False,
+                size="xl",
+                centered=True,
+                backdrop=True,
+                scrollable=False,
+            ),
+
         ]
     )
 
@@ -917,6 +964,7 @@ def register_chatbot_callbacks(app: dash.Dash):
                 image_bytes=image_bytes_store,
                 mime_type=mime_type,
             )
+
         except Exception as e:
             return (
                 current_messages,
@@ -955,6 +1003,10 @@ def register_chatbot_callbacks(app: dash.Dash):
             # ✅ Page / layer (pour router vers la bonne carte)
             if zone_info.get("page"):
                 map_action_payload["page"] = zone_info.get("page")
+            if zone_info.get("focus_type"):
+                map_action_payload["focus_type"] = zone_info.get("focus_type")
+            if zone_info.get("metrics"):
+                map_action_payload["metrics"] = zone_info.get("metrics")
             if zone_info.get("layer"):
                 map_action_payload["layer"] = zone_info.get("layer")
 
@@ -995,3 +1047,47 @@ def register_chatbot_callbacks(app: dash.Dash):
             sessions_store,
             sessions_list_children,
         )
+
+
+    # 4) Ouvrir/fermer le MODAL (carte + indicateurs) selon chat-map-action
+    @app.callback(
+        Output("map-modal", "is_open"),
+        Output("map-modal-iframe", "src"),
+        Input("chat-map-action", "data"),
+        Input("map-modal-close", "n_clicks"),
+        State("map-modal", "is_open"),
+        prevent_initial_call=True,
+    )
+    def open_close_map_modal(map_action, n_close, is_open):
+        ctx = dash.callback_context
+        trigger = ctx.triggered[0]["prop_id"].split(".")[0] if ctx.triggered else ""
+
+        if trigger == "map-modal-close":
+            return False, ""
+
+        if not isinstance(map_action, dict):
+            return no_update, no_update
+
+        if (map_action.get("page") or "").strip().lower() != "map-focus":
+            return no_update, no_update
+
+        from urllib.parse import urlencode
+
+        params = {
+            "name": map_action.get("name", ""),
+            "focus_type": map_action.get("focus_type", "situation"),
+        }
+
+        if map_action.get("lat") is not None and map_action.get("lon") is not None:
+            params["lat"] = map_action.get("lat")
+            params["lon"] = map_action.get("lon")
+            params["zoom"] = map_action.get("zoom", 12)
+
+        if map_action.get("metrics"):
+            try:
+                params["metrics"] = json.dumps(map_action.get("metrics"), ensure_ascii=False)
+            except Exception:
+                pass
+
+        src = "/assets/map_focus_minimal.html?" + urlencode(params)
+        return True, src

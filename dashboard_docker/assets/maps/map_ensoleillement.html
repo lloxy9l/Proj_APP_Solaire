@@ -72,7 +72,10 @@
     <script>
         const map = L.map('map').setView([46.2044, 6.1432], 9);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        
+
+        window.map = map;
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
@@ -197,5 +200,6 @@
 
         fetchPoints();
     </script>
+    <script src="/assets/maps/map_bridge.js"></script>
 </body>
 </html>

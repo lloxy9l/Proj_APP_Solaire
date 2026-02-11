@@ -256,7 +256,7 @@ def render_optimisation(fig_opt, top_points_data, map_optimisation):
                                 style={"padding": 0, "height": "100%", "display": "flex"},
                                 children=[
                                     html.Iframe(
-                                        id="optimisation-map",
+                                        id="map-optimisation-iframe",
                                         srcDoc=map_optimisation,
                                         style={
                                             "width": "100%",

@@ -9,7 +9,94 @@ from google.genai import types
 from .gemini_client import get_gemini_client
 
 
-GEMINI_MODEL = "gemini-2.5-flash"
+def _is_retryable_gemini_error(e: Exception) -> bool:
+    """
+    Erreurs temporaires typiques:
+      - 429 / RESOURCE_EXHAUSTED (quota / rate limit)
+      - 503/504
+      - timeouts réseau
+    On détecte via le message car google.genai peut lever différents types.
+    """
+    msg = (str(e) or "").lower()
+    return (
+        "429" in msg
+        or "resource_exhausted" in msg
+        or "too many requests" in msg
+        or "rate limit" in msg
+        or "quota" in msg
+        or "503" in msg
+        or "504" in msg
+        or "deadline" in msg
+        or "timeout" in msg
+        or "temporarily unavailable" in msg
+    )
+
+
+def _gemini_generate_with_cascade(client, contents):
+    """
+    Essaie plusieurs modèles Gemini (cascade) + retry/backoff.
+    Retourne la réponse du premier modèle qui répond.
+    """
+    last_err: Optional[Exception] = None
+
+    # S'assure que le modèle par défaut est en tête
+    models = [GEMINI_MODEL] + [m for m in GEMINI_MODEL_CASCADE if m != GEMINI_MODEL]
+    for model_name in models:
+        for attempt in range(1, GEMINI_MAX_RETRIES + 1):
+            try:
+                # Petit log utile dans docker
+                print(f"[GEMINI] model={model_name} attempt={attempt}/{GEMINI_MAX_RETRIES}")
+                return client.models.generate_content(model=model_name, contents=contents)
+            except Exception as e:
+                last_err = e
+                if _is_retryable_gemini_error(e) and attempt < GEMINI_MAX_RETRIES:
+                    # backoff exponentiel
+                    wait = min(GEMINI_BACKOFF_BASE * (2 ** (attempt - 1)), GEMINI_BACKOFF_CAP)
+                    print(f"[GEMINI] retryable error on {model_name}: {e}. sleep={wait:.1f}s")
+                    import time as _time
+                    _time.sleep(wait)
+                    continue
+                # Si erreur non retryable ou retries épuisés => on sort et on passe au modèle suivant
+                print(f"[GEMINI] switching model (failed model={model_name}): {e}")
+                break
+
+    # Aucun modèle n'a répondu
+    if last_err:
+        raise last_err
+    raise RuntimeError("Gemini: aucune réponse (cascade échouée).")
+
+
+def _infer_focus_type(user_message: str) -> str:
+    txt = (user_message or "").lower()
+    if any(k in txt for k in ["temp", "température", "temperature", "°c"]):
+        return "temperature"
+    if any(k in txt for k in ["pluie", "precip", "précip", "precipitation", "précipitation"]):
+        return "precipitation"
+    if any(k in txt for k in ["ensoleil", "soleil", "irradiance"]):
+        return "ensoleillement"
+    if any(k in txt for k in ["production", "kwh", "rendement"]):
+        return "production"
+    if any(k in txt for k in ["zone industrielle", "zones industrielles", "industriel"]):
+        return "zones-industrielles"
+    if any(k in txt for k in ["situation", "état", "etat", "meteo", "météo"]):
+        return "situation"
+    return "situation"
+
+# Modèle par défaut + cascade de modèles Gemini (fallback interne en cas de 429/quota/timeout)
+# Tu peux override via env: GEMINI_MODEL_CASCADE="gemini-2.5-flash,gemini-2.5-pro,gemini-2-flash,gemini-2-flash-lite"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL_CASCADE = [
+    m.strip() for m in os.environ.get(
+        "GEMINI_MODEL_CASCADE",
+        "gemini-2.5-flash,gemini-2.5-pro,gemini-2-flash,gemini-2-flash-lite"
+    ).split(",") if m.strip()
+]
+
+# Retry/backoff (env override)
+GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES", "4"))      # par modèle
+GEMINI_BACKOFF_BASE = float(os.environ.get("GEMINI_BACKOFF_BASE", "1.0")) # secondes
+GEMINI_BACKOFF_CAP = float(os.environ.get("GEMINI_BACKOFF_CAP", "12.0"))  # secondes
+
 
 # Config DB (peut être overridée par des variables d'environnement Docker)
 DB_HOST = os.environ.get("DB_HOST", "db")
@@ -578,6 +665,194 @@ def _format_optimal_points_table(points: List[Dict], max_rows: int = 10) -> str:
 #  FONCTION PRINCIPALE : APPEL À GEMINI
 # ============================================================================
 
+
+# ====== MAP-FOCUS: resolve coords + metrics from DB ======
+
+def _find_point_by_name_like(name: str) -> Optional[Dict]:
+    """Recherche un point GPS par adresse (LIKE) et renvoie lat/lon/idpoint/adresse."""
+    if not name:
+        return None
+    conn = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT idpoint, latitude, longitude, adresse
+            FROM 2026_solarx_pointsgps
+            WHERE adresse LIKE %s
+            LIMIT 1
+            """,
+            (f"%{name}%",),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {"idpoint": row[0], "lat": float(row[1]), "lon": float(row[2]), "label": row[3]}
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def _find_zone_origin_by_name_like(name: str) -> Optional[Dict]:
+    """Recherche une zone par nom (LIKE) et renvoie origin_lat/lon + label."""
+    if not name:
+        return None
+    conn = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT idzone, nom, origin_latitude, origin_longitude, rayon
+            FROM 2026_solarx_zone
+            WHERE nom LIKE %s
+            LIMIT 1
+            """,
+            (f"%{name}%",),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "idzone": row[0],
+            "label": row[1],
+            "lat": float(row[2]),
+            "lon": float(row[3]),
+            "rayon": row[4],
+        }
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def _fetch_latest_metrics_for_point(idpoint: int) -> Optional[Dict]:
+    """Dernière ligne de mesures pour idpoint."""
+    if not idpoint:
+        return None
+    conn = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT temperature, ensoleillement, irradiance, precipitation, date_collecte
+            FROM 2026_solarx_mesures
+            WHERE idpoint = %s
+            ORDER BY date_collecte DESC
+            LIMIT 1
+            """,
+            (int(idpoint),),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+
+        def _to_float(x):
+            try:
+                return float(x) if x is not None and str(x).strip() != "" else None
+            except Exception:
+                return None
+
+        ens_sec = _to_float(row[1])
+        ens_hours = ens_sec / 3600.0 if ens_sec is not None else None
+
+        return {
+            "temperature": _to_float(row[0]),
+            "ensoleillement_h": ens_hours,
+            "irradiance": _to_float(row[2]),
+            "precipitation": _to_float(row[3]),
+            "date_collecte": row[4],
+        }
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def _enrich_zone_info_for_map_focus(zone_info: Optional[Dict], user_message: str) -> Optional[Dict]:
+    """
+    Si la question ressemble à météo/situation + lieu, on ajoute:
+    - lat/lon/zoom
+    - focus_type
+    - metrics
+    - page='map-focus'
+    Sans casser les autres questions SolarX.
+    """
+    if not isinstance(zone_info, dict):
+        return zone_info
+
+    focus_type = _infer_focus_type(user_message)
+
+    # Déclencher map-focus seulement pour météo/situation (pas pour tout)
+    if focus_type not in ("temperature", "precipitation", "ensoleillement", "situation"):
+        return zone_info
+
+    name = (zone_info.get("name") or "").strip()
+    if not name:
+        return zone_info
+
+    # 1) Point GPS via adresse LIKE
+    pt = _find_point_by_name_like(name)
+
+    # 2) Sinon zone via nom LIKE
+    z = None
+    if not pt:
+        z = _find_zone_origin_by_name_like(name)
+
+    # 3) Si zone trouvée, prendre un point appartenant à la zone (si dispo)
+    if z and not pt:
+        conn = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT p.idpoint, p.latitude, p.longitude, p.adresse
+                FROM 2026_solarx_appartient a
+                JOIN 2026_solarx_pointsgps p ON p.idpoint = a.idpoint
+                WHERE a.idzone = %s
+                LIMIT 1
+                """,
+                (int(z["idzone"]),),
+            )
+            row = cur.fetchone()
+            if row:
+                pt = {"idpoint": row[0], "lat": float(row[1]), "lon": float(row[2]), "label": row[3]}
+        finally:
+            try:
+                cur.close()
+            except Exception:
+                pass
+            conn.close()
+
+    # Rien trouvé => pas de map-focus, on garde la réponse normale
+    if not pt and not z:
+        return zone_info
+
+    lat = pt["lat"] if pt else z["lat"]
+    lon = pt["lon"] if pt else z["lon"]
+    label = pt["label"] if pt else z["label"]
+
+    enriched = dict(zone_info)
+    enriched["page"] = "map-focus"
+    enriched["focus_type"] = focus_type
+    enriched["zoom"] = int(enriched.get("zoom") or 12)
+    enriched["lat"] = float(lat)
+    enriched["lon"] = float(lon)
+    enriched["name"] = label
+    if pt:
+        enriched["type"] = enriched.get("type") or "point"
+        enriched["idpoint"] = pt.get("idpoint")
+        if pt.get("idpoint"):
+            enriched["metrics"] = _fetch_latest_metrics_for_point(int(pt["idpoint"]))
+
+    return enriched
+
 def generate_chat_response(
     history: List[Dict[str, str]],
     user_message: str,
@@ -667,10 +942,7 @@ def generate_chat_response(
     # ==========================
     contents_phase1 = build_contents(history, user_message, image_part=image_part, optim_context=optim_context)
 
-    resp1 = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=contents_phase1,
-    )
+    resp1 = _gemini_generate_with_cascade(client, contents_phase1)
 
     text1 = (getattr(resp1, "text", "") or "").strip()
 
@@ -716,10 +988,7 @@ Consigne importante :
 """
             contents_phase2 = build_contents(history, phase2_prompt, image_part=image_part, optim_context=optim_context)
 
-            resp2 = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=contents_phase2,
-            )
+            resp2 = _gemini_generate_with_cascade(client, contents_phase2)
 
             try:
                 answer_text = (getattr(resp2, "text", "") or "").strip()
@@ -772,10 +1041,7 @@ Règles :
 """
         contents_json = build_contents(history, json_prompt, image_part=image_part, optim_context=optim_context)
 
-        resp_json = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=contents_json,
-        )
+        resp_json = _gemini_generate_with_cascade(client, contents_json)
 
         raw_json = (getattr(resp_json, "text", "") or "").strip()
 
@@ -801,4 +1067,18 @@ Règles :
         # En cas de problème, on retourne simplement le texte original sans zone
         zone_info = None
 
-    return answer_text, zone_info
+    # ✅ Enrichit zone_info pour ouvrir map-focus + métriques (sans casser le chat normal)
+    zone_info = _enrich_zone_info_for_map_focus(zone_info, user_message)
+
+    if isinstance(zone_info, dict) and zone_info.get("lat") is not None and zone_info.get("lon") is not None:
+        zone_info.setdefault("page", "map-focus")
+        zone_info.setdefault("focus_type", _infer_focus_type(user_message))
+    suggestions = []
+    if isinstance(zone_info, dict) and zone_info.get("name"):
+        nm = zone_info.get("name")
+        suggestions = [
+            {"label": f"🌡️ Température à {nm}", "query": f"Donne-moi la température à {nm}"},
+            {"label": f"🌧️ Précipitations à {nm}", "query": f"Quelles sont les précipitations à {nm} ?"},
+            {"label": f"☀️ Ensoleillement à {nm}", "query": f"Quel est l’ensoleillement à {nm} ?"},
+        ]
+    return answer_text, zone_info, suggestions

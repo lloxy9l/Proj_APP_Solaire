@@ -137,7 +137,7 @@ def render_main_content(global_means, map_production):
                 [
                     dbc.CardBody(
                         [
-                            html.Iframe(srcDoc=map_production, width='100%', height='800px')
+                            html.Iframe(id='map-production-iframe', srcDoc=map_production, width='100%', height='800px')
                         ]
                     ),
                 ]

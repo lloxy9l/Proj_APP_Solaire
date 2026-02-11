@@ -83,7 +83,7 @@ def render_precipitations(df_mois, fig_prec, map_precipitation):
                     [
                         dbc.CardBody(
                             [
-                               html.Iframe(srcDoc=map_precipitation, width='100%', height='800px')
+                               html.Iframe(id='map-precipitation-iframe', srcDoc=map_precipitation, width='100%', height='800px')
                             ]
                         ),
                     ]

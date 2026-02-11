@@ -82,7 +82,7 @@ def render_ensoleillement(df_mois, fig_ens, map_ensoleillement):
                     [
                         dbc.CardBody(
                             [
-                               html.Iframe(srcDoc=map_ensoleillement, width='100%', height='800px')
+                               html.Iframe(id='map-ensoleillement-iframe', srcDoc=map_ensoleillement, width='100%', height='800px')
                             ]
                         ),
                     ]

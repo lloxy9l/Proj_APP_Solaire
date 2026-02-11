@@ -1,27 +1,3 @@
-"""callbacks/chat_map_callbacks.py
-
-Callbacks "Chat -> Map" - Version améliorée avec zoom via URL params.
-
-NOUVEAUTÉS:
-- Navigation avec paramètres URL (?lat=X&lon=Y&zoom=Z)
-- PostMessage vers les iframes Leaflet pour zoom en temps réel
-- Support de tous les types de cartes (ensoleillement, température, etc.)
-- Animation de zoom fluide
-- Historique de navigation
-
-Attendu dans chat-map-action (dict):
-{
-  "action": "zoom",
-  "lat": 46.2,
-  "lon": 6.15,
-  "zoom": 12,
-  "page": "electricite" | "optimisation" | "ensoleillement" | "temperature" | "precipitation" | "zones-industrielles" | "production",
-  "layer": "ensoleillement" | "temperature" | ...,
-  "name": "Nom du lieu",
-  "idpoint": 123  (optionnel)
-}
-"""
-
 from __future__ import annotations
 
 import json
@@ -42,6 +18,8 @@ PAGE_ROUTE_MAP = {
     "production": "/production",
     "ensoleillement": "/ensoleillement",
     "temperature": "/temperature",
+    "map-focus": "/map-focus",
+    "map_focus": "/map-focus",
     "precipitation": "/precipitation",
     "precipitations": "/precipitation",
     "zones_industrielles": "/zones-industrielles",
@@ -187,7 +165,7 @@ def register_chat_map_callbacks(app, communes_geo_data=None, **_kwargs):
         if not target_path:
             # Fallback: si type commune -> electricite
             if action_data.get("type") == "commune":
-                target_path = "/electricite"
+                target_path = "/map-focus"
             else:
                 return no_update, no_update
 
@@ -195,6 +173,9 @@ def register_chat_map_callbacks(app, communes_geo_data=None, **_kwargs):
         search_params = ""
         if lat is not None and lon is not None:
             params = {"lat": f"{lat:.6f}", "lon": f"{lon:.6f}", "zoom": str(int(zoom))}
+            focus = action_data.get("focus_type") or action_data.get("focus")
+            if focus:
+                params["focus"] = str(focus)
             if name:
                 params["name"] = name
             search_params = "?" + urlencode(params)
@@ -292,7 +273,8 @@ def register_chat_map_callbacks(app, communes_geo_data=None, **_kwargs):
                 'map-precipitation-iframe',
                 'map-production-iframe',
                 'map-optimisation-iframe',
-                'map-zones-iframe'
+                'map-zones-iframe',
+                'map-focus-iframe'
             ];
             
             // Envoyer postMessage à chaque iframe trouvé

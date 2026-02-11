@@ -115,6 +115,7 @@ def render_zones_industrielles(map_zones_industrielles, zones_df):
                     dbc.Card([
                         dbc.CardBody([
                             html.Iframe(
+                                id='map-zones-iframe',
                                 srcDoc=map_zones_industrielles,
                                 width="100%",
                                 height="800px",

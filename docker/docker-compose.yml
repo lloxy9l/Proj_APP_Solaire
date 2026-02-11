@@ -46,6 +46,10 @@ services:
       NODE_HOST: "${NODE_HOST:-localhost}"
       NODE_PORT: "${NODE_PORT:-3000}"
       GEMINI_API_KEY: "${GEMINI_API_KEY}"
+      GEMINI_MODEL_CASCADE: "${GEMINI_MODEL_CASCADE:-gemini-2.5-flash,gemini-2.5-pro,gemini-2-flash,gemini-2-flash-lite}"
+      GEMINI_MAX_RETRIES: "${GEMINI_MAX_RETRIES:-4}"
+      GEMINI_BACKOFF_BASE: "${GEMINI_BACKOFF_BASE:-1.0}"
+      GEMINI_BACKOFF_CAP: "${GEMINI_BACKOFF_CAP:-12.0}"
     volumes:
       - ../dashboard_docker:/usr/src/app
     working_dir: /usr/src/app
