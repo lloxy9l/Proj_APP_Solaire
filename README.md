@@ -1,6 +1,8 @@
-# Geneva Weather Data Collection
+# SolarX - Geneva Weather Data Collection
 
-## Lancez le projet:
+## 🚀 Démarrage rapide
+
+### Lancer l'application complète
 
 1. Ouvrez un terminal et placez-vous dans le dossier `docker` :
    ```bash
@@ -9,14 +11,11 @@
 
 2. Choisissez le fichier `docker-compose` adapté :
    - `docker-compose.yml` : stack complète (DB + Node.js + Python + phpMyAdmin)
-   - `docker-compose.db.yml` : uniquement la base MySQL
-   - `docker-compose.node.yml` : base MySQL + backend Node.js
-   - `docker-compose.python.yml` : base MySQL + backend Node.js + application Python
-   - `docker-compose.phpmyadmin.yml` : base MySQL + phpMyAdmin
+   - `docker-compose.monitoring.yml` : système de monitoring (Prometheus + Grafana)
 
 3. Démarrez les services souhaités :
    ```bash
-   docker compose -f <docker-compose.xxx.yml> up --build
+   docker compose -f docker-compose.yml up -d
    ```
 
 4. Pour accéder au dashboard Python :
@@ -24,15 +23,38 @@
    http://localhost:8050/home
    ```
    
-## Introduction:
+## 🎯 Introduction
 
-Welcome to the Geneva Weather Data Collection project! This initiative focuses on gathering comprehensive weather data specifically tailored to the Geneva region. The project is essential for various applications such as urban planning, agriculture, and renewable energy projects. In this README, we'll outline the project's goals, data collection methods, and storage options.
+Welcome to the **SolarX** project! This initiative focuses on gathering comprehensive weather and solar data specifically tailored to the Geneva region. The project is essential for various applications such as urban planning, agriculture, and renewable energy projects.
 
-## Goals:
+### Goals
 
 The primary objective of this project is to collect a wide range of weather data pertinent to Geneva. This includes luminosity, radiance, temperature, and precipitation. By collecting such data, we aim to provide valuable insights for stakeholders involved in urban planning, agriculture, and renewable energy initiatives in the Geneva area.
 
-## Data Collection:
+---
+
+## 📊 Monitoring (Prometheus + Grafana)
+
+Ce projet intègre un système de monitoring pour superviser les performances de l'application.
+
+**Démarrer le monitoring :**
+```bash
+cd docker
+docker compose -f docker-compose.monitoring.yml up -d
+```
+
+**Accès :**
+- **Grafana** : http://localhost:3001 (admin / solarx2026)
+- **Prometheus** : http://localhost:9090
+
+**Dashboards Grafana recommandés :**
+- **1860** : Node Exporter Full
+- **7362** : MySQL Overview  
+- **193** : Docker Monitoring
+
+---
+
+## 📡 Data Collection
 
 We employ robust web scraping techniques to gather weather data from reputable sources that provide accurate and up-to-date information specific to the Geneva region. Our data collection focuses on:
 
